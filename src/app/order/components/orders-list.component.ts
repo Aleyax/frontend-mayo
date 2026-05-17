@@ -11,6 +11,8 @@ type OrdersFilters = {
   storeId?: number;
   startDate?: string;
   endDate?: string;
+  search?: string;
+  channel?: 'POS' | 'ECOMMERCE' | 'INTERNAL';
 };
 
 type OrdersQuery = OrdersFilters & {
@@ -82,6 +84,13 @@ export class OrdersListComponent implements OnInit {
     { value: 'WAITING_STOCK', label: 'Sin stock' }
   ];
 
+  readonly channelOptions = [
+    { value: '', label: 'Todos los canales' },
+    { value: 'POS', label: 'POS' },
+    { value: 'ECOMMERCE', label: 'Ecommerce' },
+    { value: 'INTERNAL', label: 'Interno' }
+  ];
+
   filterForm!: FormGroup;
   selectedOrder: any = null;
   showDetail = false;
@@ -121,6 +130,8 @@ export class OrdersListComponent implements OnInit {
 
   initializeForm() {
     this.filterForm = this.fb.group({
+      search: [''],
+      channel: [''],
       status: [''],
       storeId: [''],
       startDate: [''],
@@ -133,6 +144,8 @@ export class OrdersListComponent implements OnInit {
     const endDate = this.toLocalDateBoundaryIso(this.filterForm.get('endDate')?.value, true);
 
     const filters: OrdersFilters = {
+      search: this.normalizeSearch(this.filterForm.get('search')?.value),
+      channel: this.normalizeChannel(this.filterForm.get('channel')?.value),
       status: this.filterForm.get('status')?.value || undefined,
       storeId: this.filterForm.get('storeId')?.value ? Number(this.filterForm.get('storeId')?.value) : undefined,
       startDate,
@@ -181,6 +194,25 @@ export class OrdersListComponent implements OnInit {
     return nextFilters;
   }
 
+  private normalizeSearch(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
+  private normalizeChannel(value: unknown): OrdersFilters['channel'] | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'POS' || normalized === 'ECOMMERCE' || normalized === 'INTERNAL') {
+      return normalized;
+    }
+    return undefined;
+  }
+
   private normalizeStores(storesResponse: any): any[] {
     if (Array.isArray(storesResponse)) {
       return storesResponse;
@@ -223,6 +255,8 @@ export class OrdersListComponent implements OnInit {
 
   clearFilters() {
     this.filterForm.reset({
+      search: '',
+      channel: '',
       status: '',
       storeId: '',
       startDate: '',
@@ -239,6 +273,14 @@ export class OrdersListComponent implements OnInit {
 
   viewOrderDetail(order: any) {
     this.router.navigate(['/admin/orders', order.id]);
+  }
+
+  printOrder(order: any) {
+    const urlTree = this.router.createUrlTree(['/admin/orders', order.id], {
+      queryParams: { print: '1' }
+    });
+    const url = this.router.serializeUrl(urlTree);
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   closeDetail() {
@@ -267,5 +309,28 @@ export class OrdersListComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     return this.orderStatusLabels[status] || status;
+  }
+
+  getSalesChannelLabel(order: any): string {
+    const channel = String(order?.salesChannel || '').toUpperCase();
+    if (channel === 'POS') return 'POS';
+    if (channel === 'ECOMMERCE') return 'Ecommerce';
+    if (channel === 'INTERNAL') return 'Interno';
+    return 'No definido';
+  }
+
+  getResponsibleLabel(order: any): string {
+    const responsible = order?.primaryResponsible;
+    if (!responsible) {
+      return 'Sin asignar';
+    }
+
+    const fullName = `${responsible.firstName || ''} ${responsible.lastName || ''}`.trim() || 'Sin nombre';
+    const role = String(responsible.role || '').toUpperCase();
+
+    if (role === 'SELLER') return `${fullName} (Vendedor)`;
+    if (role === 'PICKER') return `${fullName} (Picker)`;
+    if (role === 'DISPENSER') return `${fullName} (Despachador)`;
+    return fullName;
   }
 }

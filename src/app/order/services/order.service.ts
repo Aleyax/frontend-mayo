@@ -27,6 +27,8 @@ export class OrderService {
     if (params.responsibleUserId) httpParams = httpParams.set('responsibleUserId', params.responsibleUserId);
     if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
     if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+    if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.channel) httpParams = httpParams.set('channel', params.channel);
 
     return this.http.get<any>(`${this.apiUrl}`, { params: httpParams, timeout: 10000 });
   }

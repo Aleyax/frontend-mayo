@@ -7,6 +7,26 @@
   <div class="filters-section">
     <form [formGroup]="filterForm" class="filters-grid" (ngSubmit)="applyFilters()">
       <div class="filter-group">
+        <label for="searchFilter">Buscar</label>
+        <input
+          id="searchFilter"
+          type="text"
+          formControlName="search"
+          class="filter-input input input-bordered w-full"
+          placeholder="Codigo, cliente, correo o telefono"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label for="channelFilter">Canal</label>
+        <select id="channelFilter" formControlName="channel" class="filter-input select select-bordered w-full">
+          @for (channel of channelOptions; track channel.value) {
+            <option [value]="channel.value">{{ channel.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-group">
         <label for="statusFilter">Estado</label>
         <select id="statusFilter" formControlName="status" class="filter-input select select-bordered w-full">
           @for (status of statusOptions; track status.value) {
@@ -65,8 +85,10 @@
           <tr>
             <th>Codigo</th>
             <th>Cliente</th>
+            <th>Canal</th>
             <th>Estado</th>
             <th>Tienda</th>
+            <th>Responsable</th>
             <th>Total</th>
             <th>Creado</th>
             <th>Acciones</th>
@@ -77,17 +99,22 @@
             <tr class="order-row">
               <td class="code"><strong>{{ order.code }}</strong></td>
               <td>{{ order.clientName || order.clientEmail || "Sin cliente" }}</td>
+              <td>{{ getSalesChannelLabel(order) }}</td>
               <td>
                 <span class="status-badge" [style.backgroundColor]="getStatusColor(order.status)">
                   {{ getStatusLabel(order.status) }}
                 </span>
               </td>
               <td>{{ order.sourceStore?.name || "-" }}</td>
+              <td>{{ getResponsibleLabel(order) }}</td>
               <td class="total">S/ {{ order.total | number: "1.2-2" }}</td>
               <td class="date">{{ order.createdAt | date: "short" }}</td>
               <td class="actions">
                 <button type="button" (click)="viewOrderDetail(order)" class="btn-detail" title="Ver detalles">
                   Ver
+                </button>
+                <button type="button" (click)="printOrder(order)" class="btn-print" title="Imprimir comprobante">
+                  Imprimir
                 </button>
               </td>
             </tr>

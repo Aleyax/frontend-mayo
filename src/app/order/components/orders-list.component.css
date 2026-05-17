@@ -90,7 +90,8 @@
 }
 
 .table-section {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .loading,
@@ -152,12 +153,25 @@
 
 .actions {
   text-align: center;
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .btn-detail {
   background: transparent;
   color: var(--orders-primary);
   border: 1px solid var(--orders-primary);
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.btn-print {
+  background: transparent;
+  color: var(--orders-success);
+  border: 1px solid var(--orders-success);
   border-radius: 8px;
   padding: 0.35rem 0.7rem;
   cursor: pointer;

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+﻿import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { InventoryService } from '../../../inventory/services/inventory.service';
@@ -485,6 +485,36 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
 
   computeAvailableStock(item: Inventory) {
     return item.stock - item.reservedStock;
+  }
+
+  getMovementActionLabel(movement: any): string {
+    const actionByType: Record<string, string> = {
+      IN: 'Ingreso',
+      OUT: 'Salida',
+      ADJUSTMENT: 'Ajuste',
+      TRANSFER_OUT: 'Transferencia salida',
+      TRANSFER_IN: 'Transferencia ingreso',
+      RESERVED: 'Comprometido',
+      UNRESERVED: 'Liberado',
+    };
+
+    return actionByType[movement?.type] ?? movement?.type ?? '-';
+  }
+
+  getMovementCommittedProduct(movement: any): string {
+    const variant = movement?.inventory?.variant;
+    const productName = variant?.product?.name;
+    const sku = variant?.sku;
+
+    if (!productName && !sku) {
+      return '-';
+    }
+
+    if (productName && sku) {
+      return `${productName} - ${sku}`;
+    }
+
+    return productName || sku || '-';
   }
 }
 

@@ -1,5 +1,11 @@
 @if (loading) {
-  <div class="loading">Cargando pedido...</div>
+  <div class="loading-state">Cargando pedido...</div>
+}
+
+@if (!loading && loadError) {
+  <div class="loading-state">
+    {{ loadError }}
+  </div>
 }
 
 @if (!loading && order) {
@@ -10,24 +16,34 @@
         <p class="client-info">{{ order.clientName || "Cliente" }} - {{ order.clientEmail || "" }}</p>
       </div>
       <div class="header-right">
+        <button (click)="printOrder()" class="btn-back">Imprimir</button>
         <button (click)="goBack()" class="btn-back">&larr; Volver</button>
       </div>
     </div>
 
     <div class="order-grid">
       <div class="card">
-        <h3>Estado Actual</h3>
+        <h3>Estado Operativo</h3>
         <div class="status-badge" [style.backgroundColor]="getStatusColor(order.status)">
           {{ getStatusLabel(order.status) }}
         </div>
+
+        <div class="status-progress-wrap">
+          <div class="status-progress-label">
+            <span>Progreso</span>
+            <strong>{{ getStatusProgress() }}%</strong>
+          </div>
+          <div class="status-progress-track">
+            <div class="status-progress-fill" [style.width.%]="getStatusProgress()"></div>
+          </div>
+        </div>
+
         <div class="status-transitions">
           <p>Transiciones disponibles:</p>
           @if (getNextStates().length > 0) {
             <div class="transitions-list">
               @for (state of getNextStates(); track state) {
-                <button (click)="openStatusModal()" class="btn-transition">
-                  &rarr; {{ getStatusLabel(state) }}
-                </button>
+                <span class="transition-pill">{{ getStatusLabel(state) }}</span>
               }
             </div>
           }
@@ -47,20 +63,48 @@
           <span>{{ order.code }}</span>
         </div>
         <div class="info-row">
-          <label>Subtotal:</label>
-          <span>${{ order.subtotal | number: "1.2-2" }}</span>
+          <label>Canal:</label>
+          <span>{{ getSalesChannelLabel() }}</span>
         </div>
         <div class="info-row">
-          <label>Impuesto (21%):</label>
-          <span>${{ order.tax | number: "1.2-2" }}</span>
+          <label>Subtotal:</label>
+          <span>S/ {{ order.subtotal | number: "1.2-2" }}</span>
+        </div>
+        <div class="info-row">
+          <label>Impuesto (18%):</label>
+          <span>S/ {{ order.tax | number: "1.2-2" }}</span>
         </div>
         <div class="info-row total">
           <label>Total:</label>
-          <span>${{ order.total | number: "1.2-2" }}</span>
+          <span>S/ {{ order.total | number: "1.2-2" }}</span>
         </div>
         <div class="info-row">
           <label>Fecha:</label>
           <span>{{ order.createdAt | date: "short" }}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Pago</h3>
+        <div class="info-row">
+          <label>Metodo:</label>
+          <span>{{ getPaymentMethod() }}</span>
+        </div>
+        <div class="info-row">
+          <label>Referencia:</label>
+          <span>{{ getPaymentReference() }}</span>
+        </div>
+        <div class="info-row">
+          <label>Monto recibido:</label>
+          <span>No disponible</span>
+        </div>
+        <div class="info-row">
+          <label>Vuelto:</label>
+          <span>No disponible</span>
+        </div>
+        <div class="info-row">
+          <label>Nota:</label>
+          <span>{{ order.note || "-" }}</span>
         </div>
       </div>
 
@@ -78,6 +122,10 @@
           <div class="responsible">
             <label>Despachador:</label>
             <span>{{ order.dispenserUser?.firstName }} {{ order.dispenserUser?.lastName || "No asignado" }}</span>
+          </div>
+          <div class="responsible">
+            <label>Asignado picking:</label>
+            <span>{{ order.pickingSession?.assignedUser?.firstName || "No asignado" }}</span>
           </div>
         </div>
         <button (click)="openAssignModal()" class="btn-action btn-secondary">
@@ -101,7 +149,7 @@
     </div>
 
     <div class="card items-section">
-      <h3>Productos en el Pedido</h3>
+      <h3>Productos de la Orden</h3>
       <table class="items-table">
         <thead>
           <tr>
@@ -110,7 +158,8 @@
             <th>Cantidad</th>
             <th>Precio Unit.</th>
             <th>Subtotal</th>
-            <th>Estado Pick</th>
+            <th>Separado</th>
+            <th>Estado pick</th>
           </tr>
         </thead>
         <tbody>
@@ -121,17 +170,69 @@
                 {{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}
               </td>
               <td>{{ item.quantity }}</td>
-              <td>${{ item.unitPrice | number: "1.2-2" }}</td>
-              <td>${{ item.subtotal | number: "1.2-2" }}</td>
+              <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
+              <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
+              <td>{{ getPickedQuantity(item) }}/{{ item.quantity }}</td>
               <td>
-                <span class="badge" [class.picked]="item.pickedQuantity === item.quantity">
-                  {{ item.pickedQuantity || 0 }}/{{ item.quantity }}
+                <span class="badge" [class.picked]="getPickingStatus(item) === 'COMPLETED'" [class.partial]="getPickingStatus(item) === 'PARTIAL'">
+                  {{ getPickingStatusLabel(item) }}
                 </span>
               </td>
             </tr>
           }
         </tbody>
       </table>
+    </div>
+
+    <div class="card items-section">
+      <h3>Reservas de Stock</h3>
+      @if (order.reservations?.length > 0) {
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Variante</th>
+              <th>Tienda</th>
+              <th>Cantidad reservada</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (reservation of order.reservations; track reservation.id) {
+              <tr>
+                <td>{{ reservation.inventory?.variant?.product?.name || "-" }}</td>
+                <td>
+                  {{ reservation.inventory?.variant?.color?.name || "-" }} -
+                  {{ reservation.inventory?.variant?.size?.name || "-" }}
+                </td>
+                <td>{{ reservation.inventory?.store?.name || "-" }}</td>
+                <td>{{ reservation.quantity }}</td>
+                <td>{{ getReservationStatusLabel(reservation.status) }}</td>
+                <td>{{ reservation.createdAt | date: "short" }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="no-transitions">No hay reservas asociadas.</p>
+      }
+    </div>
+
+    <div class="card items-section">
+      <h3>Timeline de la Orden</h3>
+      <div class="timeline-list">
+        @for (event of getTimelineEvents(); track event.label + '-' + (event.date ? event.date.getTime() : $index)) {
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <strong>{{ event.label }}</strong>
+              <p>{{ event.description }}</p>
+              <small>{{ event.date ? (event.date | date: "short") : "Sin fecha" }}</small>
+            </div>
+          </div>
+        }
+      </div>
     </div>
 
     <div class="action-buttons">
@@ -186,9 +287,9 @@
               <label>Rol</label>
               <select formControlName="roleType" class="form-input">
                 <option value="">Seleccionar rol</option>
-                <option value="SELLER">Vendedor</option>
-                <option value="PICKER">Picker</option>
-                <option value="DISPENSER">Despachador</option>
+                <option value="seller">Vendedor</option>
+                <option value="picker">Picker</option>
+                <option value="dispenser">Despachador</option>
               </select>
             </div>
             <div class="form-group">
