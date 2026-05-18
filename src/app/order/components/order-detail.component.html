@@ -2,19 +2,21 @@
   <div class="loading-state">Cargando pedido...</div>
 }
 
-@if (!loading && loadError) {
+@if (!order && !loading && loadError) {
   <div class="loading-state">
     {{ loadError }}
   </div>
 }
 
-@if (!loading && order) {
+@if (order) {
   <div class="order-detail-container">
     <div class="screen-content">
       <div class="order-header">
         <div class="header-left">
           <h1>{{ order.code }}</h1>
-          <p class="client-info">{{ order.clientName || "Cliente" }} - {{ order.clientEmail || "" }}</p>
+          <p class="client-info">
+            {{ order.clientName || 'Cliente' }} - {{ order.clientEmail || '' }}
+          </p>
         </div>
         <div class="header-right">
           <div class="print-format-picker">
@@ -24,8 +26,8 @@
               <option value="ticket">Ticket termico</option>
             </select>
           </div>
-          <button (click)="printOrder()" class="btn-back">Imprimir</button>
-          <button (click)="goBack()" class="btn-back">&larr; Volver</button>
+          <button type="button" (click)="printOrder()" class="btn-back">Imprimir</button>
+          <button type="button" (click)="goBack()" class="btn-back">&larr; Volver</button>
         </div>
       </div>
 
@@ -59,7 +61,12 @@
               <p class="no-transitions">Sin transiciones disponibles</p>
             }
           </div>
-          <button (click)="openStatusModal()" class="btn-action btn-primary" [disabled]="getNextStates().length === 0">
+          <button
+            type="button"
+            (click)="openStatusModal()"
+            class="btn-action btn-primary"
+            [disabled]="getNextStates().length === 0"
+          >
             Cambiar Estado
           </button>
         </div>
@@ -76,19 +83,19 @@
           </div>
           <div class="info-row">
             <label>Subtotal:</label>
-            <span>S/ {{ order.subtotal | number: "1.2-2" }}</span>
+            <span>S/ {{ order.subtotal | number: '1.2-2' }}</span>
           </div>
           <div class="info-row">
             <label>Impuesto (18%):</label>
-            <span>S/ {{ order.tax | number: "1.2-2" }}</span>
+            <span>S/ {{ order.tax | number: '1.2-2' }}</span>
           </div>
           <div class="info-row total">
             <label>Total:</label>
-            <span>S/ {{ order.total | number: "1.2-2" }}</span>
+            <span>S/ {{ order.total | number: '1.2-2' }}</span>
           </div>
           <div class="info-row">
             <label>Fecha:</label>
-            <span>{{ order.createdAt | date: "short" }}</span>
+            <span>{{ order.createdAt | date: 'short' }}</span>
           </div>
         </div>
 
@@ -112,7 +119,7 @@
           </div>
           <div class="info-row">
             <label>Nota:</label>
-            <span>{{ order.note || "-" }}</span>
+            <span>{{ order.note || '-' }}</span>
           </div>
         </div>
 
@@ -121,22 +128,31 @@
           <div class="responsibles">
             <div class="responsible">
               <label>Vendedor:</label>
-              <span>{{ order.sellerUser?.firstName }} {{ order.sellerUser?.lastName || "No asignado" }}</span>
+              <span
+                >{{ order.sellerUser?.firstName }}
+                {{ order.sellerUser?.lastName || 'No asignado' }}</span
+              >
             </div>
             <div class="responsible">
               <label>Picker:</label>
-              <span>{{ order.pickerUser?.firstName }} {{ order.pickerUser?.lastName || "No asignado" }}</span>
+              <span
+                >{{ order.pickerUser?.firstName }}
+                {{ order.pickerUser?.lastName || 'No asignado' }}</span
+              >
             </div>
             <div class="responsible">
               <label>Despachador:</label>
-              <span>{{ order.dispenserUser?.firstName }} {{ order.dispenserUser?.lastName || "No asignado" }}</span>
+              <span
+                >{{ order.dispenserUser?.firstName }}
+                {{ order.dispenserUser?.lastName || 'No asignado' }}</span
+              >
             </div>
             <div class="responsible">
               <label>Asignado picking:</label>
-              <span>{{ order.pickingSession?.assignedUser?.firstName || "No asignado" }}</span>
+              <span>{{ order.pickingSession?.assignedUser?.firstName || 'No asignado' }}</span>
             </div>
           </div>
-          <button (click)="openAssignModal()" class="btn-action btn-secondary">
+          <button type="button" (click)="openAssignModal()" class="btn-action btn-secondary">
             Asignar Responsable
           </button>
         </div>
@@ -146,11 +162,11 @@
           <div class="locations">
             <div class="location">
               <label>Tienda Origen:</label>
-              <span>{{ order.sourceStore?.name || "N/A" }}</span>
+              <span>{{ order.sourceStore?.name || 'N/A' }}</span>
             </div>
             <div class="location">
               <label>Tienda Fulfillment:</label>
-              <span>{{ order.fulfillmentStore?.name || "N/A" }}</span>
+              <span>{{ order.fulfillmentStore?.name || 'N/A' }}</span>
             </div>
           </div>
         </div>
@@ -174,15 +190,17 @@
             @for (item of order.items; track item.id ?? item.variantId ?? $index) {
               <tr>
                 <td>{{ item.variant?.product?.name }}</td>
-                <td>
-                  {{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}
-                </td>
+                <td>{{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
-                <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
+                <td>S/ {{ item.unitPrice | number: '1.2-2' }}</td>
+                <td>S/ {{ item.subtotal | number: '1.2-2' }}</td>
                 <td>{{ getPickedQuantity(item) }}/{{ item.quantity }}</td>
                 <td>
-                  <span class="badge" [class.picked]="getPickingStatus(item) === 'COMPLETED'" [class.partial]="getPickingStatus(item) === 'PARTIAL'">
+                  <span
+                    class="badge"
+                    [class.picked]="getPickingStatus(item) === 'COMPLETED'"
+                    [class.partial]="getPickingStatus(item) === 'PARTIAL'"
+                  >
                     {{ getPickingStatusLabel(item) }}
                   </span>
                 </td>
@@ -190,6 +208,131 @@
             }
           </tbody>
         </table>
+      </div>
+
+      <div class="card items-section">
+        <h3>Picking Operativo</h3>
+
+        @if (loadingPicking) {
+          <p class="no-transitions">Cargando datos de picking...</p>
+        }
+
+        @if (canStartPickingFromDetail()) {
+          <p class="no-transitions no-transitions-info">La orden aun no tiene picking iniciado.</p>
+          <button
+            type="button"
+            (click)="startPickingFromDetail()"
+            class="btn-action btn-primary"
+            [disabled]="startingPicking"
+          >
+            {{ startingPicking ? 'Iniciando...' : 'Iniciar Preparacion' }}
+          </button>
+        }
+
+        @if (!canStartPickingFromDetail()) {
+          <div class="status-progress-wrap picking-progress-wrap">
+            <div class="status-progress-label">
+              <span>Progreso de picking</span>
+              <strong>{{ getPickingProgressForDetail() }}%</strong>
+            </div>
+            <div class="status-progress-track">
+              <div
+                class="status-progress-fill"
+                [style.width.%]="getPickingProgressForDetail()"
+              ></div>
+            </div>
+          </div>
+
+          <table class="items-table picking-items-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Variante</th>
+                <th>Solicitada</th>
+                <th>Separada</th>
+                <th>Faltante</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (
+                item of getPickingItemsForDetail();
+                track item.pickingItemId ?? item.variantId ?? $index
+              ) {
+                <tr>
+                  <td>{{ item.variant?.product?.name || '-' }}</td>
+                  <td>
+                    {{ item.variant?.color?.name || '-' }} - {{ item.variant?.size?.name || '-' }}
+                  </td>
+                  <td>{{ item.requestedQuantity }}</td>
+                  <td>{{ item.pickedQuantity }}</td>
+                  <td>{{ item.missingQuantity }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [class.picked]="getPickingItemStatusClass(item.status) === 'picked'"
+                      [class.partial]="getPickingItemStatusClass(item.status) === 'partial'"
+                    >
+                      {{ getPickingItemStatusLabel(item.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (item.pickingItemId) {
+                      <div class="pick-actions">
+                        <button
+                          type="button"
+                          class="pick-step-btn"
+                          (click)="markPickingItemFromDetail(item, 'dec')"
+                          [disabled]="isPickingItemUpdating(item) || item.pickedQuantity <= 0"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          class="pick-step-btn"
+                          (click)="markPickingItemFromDetail(item, 'inc')"
+                          [disabled]="
+                            isPickingItemUpdating(item) ||
+                            item.pickedQuantity >= item.requestedQuantity
+                          "
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          class="pick-complete-btn"
+                          (click)="markPickingItemFromDetail(item, 'complete')"
+                          [disabled]="
+                            isPickingItemUpdating(item) ||
+                            item.pickedQuantity >= item.requestedQuantity
+                          "
+                        >
+                          Completar
+                        </button>
+                      </div>
+                    } @else {
+                      <span class="no-transitions">Sin sesion</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          @if (!isPickingFinalizedForDetail()) {
+            <button
+              type="button"
+              (click)="completePickingFromDetail()"
+              class="btn-action btn-success"
+              [disabled]="!canCompletePickingFromDetail()"
+            >
+              {{ finishingPicking ? 'Finalizando...' : 'Finalizar Preparacion' }}
+            </button>
+          } @else {
+            <p class="picking-finished-note">Preparacion finalizada. Pedido listo para entrega.</p>
+          }
+        }
       </div>
 
       <div class="card items-section">
@@ -209,15 +352,15 @@
             <tbody>
               @for (reservation of order.reservations; track reservation.id) {
                 <tr>
-                  <td>{{ reservation.inventory?.variant?.product?.name || "-" }}</td>
+                  <td>{{ reservation.inventory?.variant?.product?.name || '-' }}</td>
                   <td>
-                    {{ reservation.inventory?.variant?.color?.name || "-" }} -
-                    {{ reservation.inventory?.variant?.size?.name || "-" }}
+                    {{ reservation.inventory?.variant?.color?.name || '-' }} -
+                    {{ reservation.inventory?.variant?.size?.name || '-' }}
                   </td>
-                  <td>{{ reservation.inventory?.store?.name || "-" }}</td>
+                  <td>{{ reservation.inventory?.store?.name || '-' }}</td>
                   <td>{{ reservation.quantity }}</td>
                   <td>{{ getReservationStatusLabel(reservation.status) }}</td>
-                  <td>{{ reservation.createdAt | date: "short" }}</td>
+                  <td>{{ reservation.createdAt | date: 'short' }}</td>
                 </tr>
               }
             </tbody>
@@ -230,13 +373,16 @@
       <div class="card items-section">
         <h3>Timeline de la Orden</h3>
         <div class="timeline-list">
-          @for (event of getTimelineEvents(); track event.label + '-' + (event.date ? event.date.getTime() : $index)) {
+          @for (
+            event of getTimelineEvents();
+            track event.label + '-' + (event.date ? event.date.getTime() : $index)
+          ) {
             <div class="timeline-item">
               <div class="timeline-dot"></div>
               <div class="timeline-content">
                 <strong>{{ event.label }}</strong>
                 <p>{{ event.description }}</p>
-                <small>{{ event.date ? (event.date | date: "short") : "Sin fecha" }}</small>
+                <small>{{ event.date ? (event.date | date: 'short') : 'Sin fecha' }}</small>
               </div>
             </div>
           }
@@ -244,11 +390,8 @@
       </div>
 
       <div class="action-buttons">
-        @if (order.status === "READY") {
-          <button
-            (click)="openDeliverModal()"
-            class="btn-action btn-success"
-          >
+        @if (order.status === 'READY') {
+          <button type="button" (click)="openDeliverModal()" class="btn-action btn-success">
             Entregar Pedido
           </button>
         }
@@ -294,27 +437,23 @@
               <div class="form-group">
                 <label>Rol</label>
                 <select formControlName="roleType" class="form-input">
-                  <option value="">Seleccionar rol</option>
-                  <option value="seller">Vendedor</option>
-                  <option value="picker">Picker</option>
-                  <option value="dispenser">Despachador</option>
+                  <option [ngValue]="null">Seleccionar rol</option>
+                  <option [ngValue]="'seller'">Vendedor</option>
+                  <option [ngValue]="'picker'">Picker</option>
+                  <option [ngValue]="'dispenser'">Despachador</option>
                 </select>
               </div>
               <div class="form-group">
                 <label>Usuario</label>
                 <select formControlName="userId" class="form-input">
-                  <option value="">Seleccionar usuario</option>
+                  <option [ngValue]="null">Seleccionar usuario</option>
                   @for (user of users; track user.id) {
-                    <option [value]="user.id">
-                      {{ user.firstName }} {{ user.lastName }}
-                    </option>
+                    <option [ngValue]="user.id">{{ user.firstName }} {{ user.lastName }}</option>
                   }
                 </select>
               </div>
               <div class="modal-buttons">
-                <button type="button" (click)="submitAssign()" class="btn-submit">
-                  Asignar
-                </button>
+                <button type="button" (click)="submitAssign()" class="btn-submit">Asignar</button>
                 <button type="button" (click)="showAssignModal = false" class="btn-cancel">
                   Cancelar
                 </button>
@@ -330,10 +469,10 @@
             <h3>Confirmar Entrega</h3>
             <p>Deseas marcar este pedido como entregado? No se puede deshacer esta accion.</p>
             <div class="modal-buttons">
-              <button (click)="submitDeliver()" class="btn-submit">
+              <button type="button" (click)="submitDeliver()" class="btn-submit">
                 Confirmar Entrega
               </button>
-              <button (click)="showDeliverModal = false" class="btn-cancel">
+              <button type="button" (click)="showDeliverModal = false" class="btn-cancel">
                 Cancelar
               </button>
             </div>
@@ -342,25 +481,29 @@
       }
     </div>
 
-    <div class="print-content" [class.layout-invoice]="printLayout === 'invoice'" [class.layout-ticket]="printLayout === 'ticket'">
+    <div
+      class="print-content"
+      [class.layout-invoice]="printLayout === 'invoice'"
+      [class.layout-ticket]="printLayout === 'ticket'"
+    >
       <section class="print-sheet print-sheet-invoice">
         <div class="invoice-header">
           <div class="invoice-brand">
-            <h2>{{ order.sourceStore?.name || "HYDRA COMPANY" }}</h2>
-            <p>{{ order.sourceStore?.address || "Direccion no registrada" }}</p>
-            <p>Telefono: {{ order.sourceStore?.phone || order.clientPhone || "-" }}</p>
+            <h2>{{ order.sourceStore?.name || 'HYDRA COMPANY' }}</h2>
+            <p>{{ order.sourceStore?.address || 'Direccion no registrada' }}</p>
+            <p>Telefono: {{ order.sourceStore?.phone || order.clientPhone || '-' }}</p>
           </div>
           <div class="invoice-meta">
             <p class="invoice-doc">BOLETA DE VENTA</p>
             <p class="invoice-code">{{ order.code }}</p>
-            <p>{{ order.createdAt | date: "dd/MM/yyyy HH:mm" }}</p>
+            <p>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
           </div>
         </div>
 
         <div class="invoice-client">
-          <div><strong>Cliente:</strong> {{ order.clientName || "Cliente varios" }}</div>
-          <div><strong>Correo:</strong> {{ order.clientEmail || "-" }}</div>
-          <div><strong>Telefono:</strong> {{ order.clientPhone || "-" }}</div>
+          <div><strong>Cliente:</strong> {{ order.clientName || 'Cliente varios' }}</div>
+          <div><strong>Correo:</strong> {{ order.clientEmail || '-' }}</div>
+          <div><strong>Telefono:</strong> {{ order.clientPhone || '-' }}</div>
           <div><strong>Canal:</strong> {{ getSalesChannelLabel() }}</div>
         </div>
 
@@ -380,17 +523,23 @@
                 <td>{{ item.quantity }}</td>
                 <td>UND</td>
                 <td>{{ getPrintItemDescription(item) }}</td>
-                <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
-                <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
+                <td>S/ {{ item.unitPrice | number: '1.2-2' }}</td>
+                <td>S/ {{ item.subtotal | number: '1.2-2' }}</td>
               </tr>
             }
           </tbody>
         </table>
 
         <div class="invoice-summary">
-          <div><span>Subtotal</span><strong>S/ {{ order.subtotal | number: "1.2-2" }}</strong></div>
-          <div><span>IGV (18%)</span><strong>S/ {{ order.tax | number: "1.2-2" }}</strong></div>
-          <div class="total"><span>Total</span><strong>S/ {{ order.total | number: "1.2-2" }}</strong></div>
+          <div>
+            <span>Subtotal</span><strong>S/ {{ order.subtotal | number: '1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>IGV (18%)</span><strong>S/ {{ order.tax | number: '1.2-2' }}</strong>
+          </div>
+          <div class="total">
+            <span>Total</span><strong>S/ {{ order.total | number: '1.2-2' }}</strong>
+          </div>
         </div>
 
         <div class="invoice-footer">
@@ -402,16 +551,16 @@
 
       <section class="print-sheet print-sheet-ticket">
         <div class="ticket-header">
-          <p class="ticket-title">{{ order.sourceStore?.name || "HYDRA COMPANY" }}</p>
-          <p>{{ order.sourceStore?.address || "Direccion no registrada" }}</p>
-          <p>{{ order.createdAt | date: "dd/MM/yyyy HH:mm" }}</p>
+          <p class="ticket-title">{{ order.sourceStore?.name || 'HYDRA COMPANY' }}</p>
+          <p>{{ order.sourceStore?.address || 'Direccion no registrada' }}</p>
+          <p>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
           <p>Boleta: {{ order.code }}</p>
         </div>
 
         <div class="ticket-divider"></div>
 
         <div class="ticket-client">
-          <p>Cliente: {{ order.clientName || "Cliente varios" }}</p>
+          <p>Cliente: {{ order.clientName || 'Cliente varios' }}</p>
           <p>Canal: {{ getSalesChannelLabel() }}</p>
         </div>
 
@@ -421,7 +570,10 @@
           @for (item of order.items; track item.id ?? item.variantId ?? $index) {
             <div class="ticket-item">
               <p class="ticket-item-name">{{ getPrintItemDescription(item) }}</p>
-              <p class="ticket-item-line">{{ item.quantity }} x S/ {{ item.unitPrice | number: "1.2-2" }} = S/ {{ item.subtotal | number: "1.2-2" }}</p>
+              <p class="ticket-item-line">
+                {{ item.quantity }} x S/ {{ item.unitPrice | number: '1.2-2' }} = S/
+                {{ item.subtotal | number: '1.2-2' }}
+              </p>
             </div>
           }
         </div>
@@ -429,9 +581,15 @@
         <div class="ticket-divider"></div>
 
         <div class="ticket-summary">
-          <p><span>Subtotal</span><strong>S/ {{ order.subtotal | number: "1.2-2" }}</strong></p>
-          <p><span>IGV</span><strong>S/ {{ order.tax | number: "1.2-2" }}</strong></p>
-          <p class="ticket-total"><span>TOTAL</span><strong>S/ {{ order.total | number: "1.2-2" }}</strong></p>
+          <p>
+            <span>Subtotal</span><strong>S/ {{ order.subtotal | number: '1.2-2' }}</strong>
+          </p>
+          <p>
+            <span>IGV</span><strong>S/ {{ order.tax | number: '1.2-2' }}</strong>
+          </p>
+          <p class="ticket-total">
+            <span>TOTAL</span><strong>S/ {{ order.total | number: '1.2-2' }}</strong>
+          </p>
         </div>
 
         <div class="ticket-divider"></div>

@@ -172,6 +172,10 @@
   margin: 0;
 }
 
+.no-transitions-info {
+  color: #7f8c8d;
+}
+
 .info-row {
   display: flex;
   justify-content: space-between;
@@ -316,7 +320,7 @@
   color: #7f8c8d;
 }
 
-.items-table tr:hover {
+.items-table tbody tr:hover {
   background: #f8f9fa;
 }
 
@@ -336,6 +340,49 @@
 
 .badge.partial {
   background: #f39c12;
+}
+
+.picking-progress-wrap {
+  margin-top: 0.2rem;
+}
+
+.pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pick-step-btn,
+.pick-complete-btn {
+  border: 1px solid #bdc3c7;
+  background: white;
+  color: #2c3e50;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pick-step-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.pick-complete-btn {
+  padding: 0.35rem 0.55rem;
+}
+
+.pick-step-btn:hover:not(:disabled),
+.pick-complete-btn:hover:not(:disabled) {
+  background: #3498db;
+  border-color: #3498db;
+  color: white;
+}
+
+.pick-step-btn:disabled,
+.pick-complete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .action-buttons {
@@ -698,6 +745,45 @@
   background: var(--detail-surface-soft);
 }
 
+.transition-pill {
+  background: color-mix(in oklab, var(--detail-primary) 14%, var(--detail-surface));
+  border-color: color-mix(in oklab, var(--detail-primary) 28%, var(--detail-border));
+  color: var(--detail-text);
+}
+
+.items-table tbody tr {
+  background: color-mix(in oklab, var(--detail-surface) 90%, var(--detail-border));
+  transition: background 0.2s ease-in-out;
+}
+
+.items-table tbody tr:nth-child(odd),
+.items-table tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--detail-surface) 90%, var(--detail-border)) !important;
+}
+
+.items-table tbody tr:hover {
+  background: color-mix(in oklab, var(--detail-primary) 12%, var(--detail-surface)) !important;
+}
+
+.items-table tbody td {
+  color: var(--detail-muted);
+  background: transparent;
+}
+
+.pick-step-btn,
+.pick-complete-btn {
+  background: var(--detail-surface-soft);
+  border-color: var(--detail-border);
+  color: var(--detail-text);
+}
+
+.pick-step-btn:hover:not(:disabled),
+.pick-complete-btn:hover:not(:disabled) {
+  background: var(--detail-primary);
+  border-color: var(--detail-primary);
+  color: var(--detail-primary-content);
+}
+
 .btn-primary {
   background: var(--detail-primary);
   color: var(--detail-primary-content);
@@ -738,6 +824,22 @@
 
 .timeline-dot {
   background: var(--detail-primary);
+}
+
+.picking-finished-note {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--detail-success) 45%, var(--detail-border));
+  background: color-mix(in oklab, var(--detail-success) 16%, var(--detail-surface));
+  color: color-mix(in oklab, var(--detail-success) 78%, var(--detail-text));
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.refreshing-note {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.85rem;
+  color: var(--detail-muted);
 }
 
 @media (max-width: 900px) {

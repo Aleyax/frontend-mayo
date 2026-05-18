@@ -1,0 +1,241 @@
+<div class="flex flex-col gap-6">
+  <section class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <p class="text-sm text-gray-500">Operacion multitienda</p>
+      <h1 class="text-3xl font-bold">Transferencias de stock</h1>
+      <p class="text-sm text-gray-500">Crea y recibe transferencias entre tiendas.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a routerLink="/admin/inventory" class="btn btn-outline btn-sm">Volver a inventario</a>
+      <button class="btn btn-outline btn-sm" type="button" (click)="refreshTransfers()">Actualizar</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="openCreateTransferDrawer()">Nueva transferencia</button>
+    </div>
+  </section>
+
+  <section class="rounded-box border border-base-300 bg-base-200 p-4">
+    <div class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Buscar transferencia</span>
+        <input
+          type="text"
+          class="input w-full"
+          [value]="searchParam()"
+          (input)="setSearchParam($any($event.target).value)"
+          placeholder="Codigo, tienda, nota o usuario"
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Estado</span>
+        <select class="select w-full" [value]="statusFilter()" (change)="setStatusFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="PENDING">Pendiente</option>
+          <option value="IN_TRANSIT">En transito</option>
+          <option value="RECEIVED">Recibida</option>
+          <option value="CANCELLED">Cancelada</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table table-zebra w-full">
+      <thead class="bg-base-200 text-base-content">
+        <tr>
+          <th>Codigo</th>
+          <th>Estado</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Items</th>
+          <th>Creado</th>
+          <th>Recibido</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (filteredTransfers().length === 0) {
+          <tr>
+            <td colspan="8" class="py-8 text-center text-sm text-gray-500">
+              No hay transferencias para los filtros seleccionados.
+            </td>
+          </tr>
+        } @else {
+          @for (transfer of filteredTransfers(); track transfer.id) {
+            <tr>
+              <td>
+                <div class="font-medium">{{ transfer.code }}</div>
+                <div class="text-xs text-gray-500">#{{ transfer.id }}</div>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(transfer.status)">
+                  {{ getStatusLabel(transfer.status) }}
+                </span>
+              </td>
+              <td>
+                <div>{{ transfer.fromStore.name || '-' }}</div>
+                <div class="text-xs text-gray-500">{{ transfer.fromStore.code || '-' }}</div>
+              </td>
+              <td>
+                <div>{{ transfer.toStore.name || '-' }}</div>
+                <div class="text-xs text-gray-500">{{ transfer.toStore.code || '-' }}</div>
+              </td>
+              <td>
+                <div class="font-medium">{{ transfer.items.length || 0 }} item(s)</div>
+                <div class="text-xs text-gray-500">{{ getTransferItemsSummary(transfer) }}</div>
+              </td>
+              <td>
+                <div>{{ transfer.createdAt | date: 'short' }}</div>
+                <div class="text-xs text-gray-500">{{ getCreatedByLabel(transfer) }}</div>
+              </td>
+              <td>
+                @if (transfer.status === 'RECEIVED') {
+                  <div>{{ transfer.updatedAt | date: 'short' }}</div>
+                  <div class="text-xs text-gray-500">{{ getReceivedByLabel(transfer) }}</div>
+                } @else {
+                  <span class="text-xs text-gray-500">Pendiente</span>
+                }
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-2">
+                  @if (transfer.status !== 'RECEIVED' && transfer.status !== 'CANCELLED') {
+                    <button
+                      class="btn btn-success btn-xs"
+                      type="button"
+                      [disabled]="isReceiving(transfer.id)"
+                      (click)="receiveTransfer(transfer)"
+                    >
+                      @if (isReceiving(transfer.id)) {
+                        Recibiendo...
+                      } @else {
+                        Recibir
+                      }
+                    </button>
+                  } @else {
+                    <span class="text-xs text-gray-500">Sin acciones</span>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+
+  @if (showCreateDrawer()) {
+    <div class="fixed inset-0 z-40 bg-black/40" (click)="closeCreateTransferDrawer()"></div>
+    <aside class="transfer-drawer fixed right-0 top-0 z-50 h-full w-full overflow-y-auto border-l border-base-300 bg-base-100 p-6 shadow-2xl">
+      <div class="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold">Nueva transferencia</h2>
+          <p class="text-sm text-gray-500">Completa origen, destino e items para crear la transferencia.</p>
+        </div>
+        <button class="btn btn-ghost btn-circle" type="button" (click)="closeCreateTransferDrawer()">X</button>
+      </div>
+
+      <div class="grid gap-4">
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Tienda origen</span>
+          <select class="select w-full" [value]="fromStoreId() ?? ''" (change)="setFromStoreId($any($event.target).value)">
+            <option value="">Selecciona tienda origen</option>
+            @for (store of storeOptions(); track store.id) {
+              <option [value]="store.id">{{ store.name }} ({{ store.code }})</option>
+            }
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Tienda destino</span>
+          <select class="select w-full" [value]="toStoreId() ?? ''" (change)="setToStoreId($any($event.target).value)">
+            <option value="">Selecciona tienda destino</option>
+            @for (store of storeOptions(); track store.id) {
+              <option [value]="store.id">{{ store.name }} ({{ store.code }})</option>
+            }
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Buscar variante</span>
+          <input
+            type="text"
+            class="input w-full"
+            [value]="variantSearch()"
+            (input)="setVariantSearch($any($event.target).value)"
+            placeholder="SKU, producto, color o talla"
+          />
+          @if (!fromStoreId()) {
+            <span class="text-xs text-gray-500">Selecciona una tienda de origen para cargar variantes disponibles.</span>
+          } @else if (loadingOriginInventory()) {
+            <span class="text-xs text-gray-500">Cargando variantes disponibles de la tienda origen...</span>
+          } @else if (filteredVariantCatalog().length === 0) {
+            <span class="text-xs text-gray-500">No hay variantes con stock disponible en la tienda origen.</span>
+          }
+        </label>
+
+        <div class="rounded-box border border-base-300 bg-base-200 p-4">
+          <div class="mb-3 flex items-center justify-between">
+            <p class="font-medium">Items de transferencia</p>
+            <button class="btn btn-outline btn-xs" type="button" (click)="addDraftItemRow()">Agregar fila</button>
+          </div>
+
+          <div class="space-y-3">
+            @for (item of draftItems(); track item.rowId) {
+              <div class="grid gap-2 rounded-lg border border-base-300 bg-base-100 p-3 md:grid-cols-[1fr_110px_90px]">
+                <select
+                  class="select w-full"
+                  [disabled]="!fromStoreId() || loadingOriginInventory()"
+                  [value]="item.variantId ?? ''"
+                  (change)="setDraftVariant(item.rowId, $any($event.target).value)"
+                >
+                  <option value="">Selecciona variante</option>
+                  @for (variant of filteredVariantCatalog(); track variant.variantId) {
+                    <option [value]="variant.variantId">
+                      {{ variant.label }} - Disp: {{ getOriginVariantAvailableStock(variant.variantId) }}
+                    </option>
+                  }
+                </select>
+
+                <input
+                  type="number"
+                  min="1"
+                  class="input w-full"
+                  [value]="item.quantity"
+                  (input)="setDraftQuantity(item.rowId, $any($event.target).value)"
+                />
+
+                <button class="btn btn-error btn-outline" type="button" (click)="removeDraftItemRow(item.rowId)">
+                  Quitar
+                </button>
+
+                <p class="md:col-span-3 text-xs text-gray-500">
+                  {{ getDraftRowVariantLabel(item.variantId) }}
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Nota</span>
+          <textarea
+            class="textarea w-full"
+            rows="3"
+            [value]="transferNote()"
+            (input)="setTransferNote($any($event.target).value)"
+            placeholder="Motivo o detalle opcional"
+          ></textarea>
+        </label>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button class="btn btn-ghost" type="button" (click)="closeCreateTransferDrawer()">Cancelar</button>
+          <button class="btn btn-primary" type="button" [disabled]="!canCreateTransfer" (click)="saveTransfer()">
+            @if (creatingTransfer()) {
+              Creando...
+            } @else {
+              Crear transferencia
+            }
+          </button>
+        </div>
+      </div>
+    </aside>
+  }
+</div>

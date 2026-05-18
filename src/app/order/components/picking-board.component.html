@@ -9,9 +9,11 @@
       <div class="filters">
         <form [formGroup]="filterForm" (change)="onFilterChange()">
           <select formControlName="status" class="filter-select">
-            <option value="CONFIRMED">Confirmados</option>
-            <option value="PREPARING">En Preparacion</option>
             <option value="">Todos</option>
+            <option value="CONFIRMED">Confirmados</option>
+            <option value="WAITING_TRANSFER">Esperando transferencia</option>
+            <option value="PREPARING">En preparacion</option>
+            <option value="READY">Listos</option>
           </select>
         </form>
       </div>
@@ -20,15 +22,15 @@
         <div class="loading">Cargando pedidos...</div>
       }
 
-      @if (!loading && orders.length === 0) {
+      @if (!loading && orders().length === 0) {
         <div class="no-orders">
           No hay pedidos para preparar
         </div>
       }
 
-      @if (!loading && orders.length > 0) {
+      @if (!loading && orders().length > 0) {
         <div class="orders-queue">
-          @for (order of orders; track order.id ?? order.code ?? $index) {
+          @for (order of orders(); track order.id ?? order.code ?? $index) {
             <div
               (click)="selectOrder(order)"
               [class.selected]="selectedOrder?.id === order.id"
@@ -63,7 +65,7 @@
         <div class="picking-detail">
           <div class="detail-header">
             <h2>{{ selectedOrder.code }}</h2>
-            <button (click)="clearSelection()" class="btn-clear">X</button>
+            <button type="button" (click)="clearSelection()" class="btn-clear">X</button>
           </div>
 
           <div class="order-summary">
@@ -72,81 +74,119 @@
               <span>{{ selectedOrder.clientName || "Cliente" }}</span>
             </div>
             <div class="summary-item">
-              <label>Telefono:</label>
-              <span>{{ selectedOrder.clientPhone || "N/A" }}</span>
+              <label>Estado:</label>
+              <span>{{ getStatusLabel(selectedOrder.status) }}</span>
             </div>
             <div class="summary-item">
-              <label>Email:</label>
-              <span>{{ selectedOrder.clientEmail || "N/A" }}</span>
+              <label>Canal:</label>
+              <span>{{ selectedOrder.salesChannel || "-" }}</span>
+            </div>
+            <div class="summary-item">
+              <label>Responsable picking:</label>
+              <span>{{ selectedPicking?.pickingSession?.assignedUser?.firstName || selectedOrder.pickerUser?.firstName || "No asignado" }}</span>
             </div>
           </div>
 
-          <div class="overall-progress">
-            <h3>Progreso General</h3>
-            <div class="progress-bar-large">
-              <div class="progress-fill" [style.width.%]="getPickingProgress(selectedOrder)"></div>
-            </div>
-            <p class="progress-text-large">{{ getPickingProgress(selectedOrder) }}% completado</p>
-          </div>
+          @if (loadingDetail) {
+            <div class="loading">Cargando picking...</div>
+          }
 
-          <div class="items-to-pick">
-            <h3>Productos a Preparar</h3>
-            <table class="picking-table">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Variante</th>
-                  <th>Cantidad</th>
-                  <th>Separado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of selectedOrder.items; track item.id ?? item.variantId ?? $index) {
-                  <tr [class.completed]="item.pickedQuantity === item.quantity">
-                    <td>{{ item.variant?.product?.name }}</td>
-                    <td>{{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}</td>
-                    <td class="quantity">{{ item.quantity }}</td>
-                    <td class="progress-cell">
-                      <div class="progress-badge">
-                        <span class="picked">{{ item.pickedQuantity || 0 }}</span>
-                        <span class="separator">/</span>
-                        <span class="total">{{ item.quantity }}</span>
-                      </div>
-                      <div class="item-progress-bar">
-                        <div class="item-progress-fill" [style.width.%]="getItemProgress(item)"></div>
-                      </div>
-                    </td>
-                    <td class="actions">
-                      <button (click)="markItemUnpicked(item)" class="btn-minus" [disabled]="!item.pickedQuantity">
-                        -
-                      </button>
-                      <span class="counter">{{ item.pickedQuantity || 0 }}</span>
-                      <button (click)="markItemPicked(item)" class="btn-plus" [disabled]="item.pickedQuantity === item.quantity">
-                        +
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          @if (getPickingProgress(selectedOrder) === 100) {
-            <div class="complete-section">
-              <div class="completion-message">Todos los productos han sido separados</div>
-              <button (click)="completeOrder()" class="btn-complete-order">
-                Marcar como READY
+          @if (canStartPicking()) {
+            <div class="start-section">
+              <p class="warning">Esta orden aun no tiene una sesion de picking iniciada.</p>
+              <button type="button" (click)="startPicking()" class="btn-complete-order" [disabled]="startingPicking">
+                {{ startingPicking ? "Iniciando..." : "Iniciar preparacion" }}
               </button>
             </div>
           }
 
-          @if (getPickingProgress(selectedOrder) < 100) {
-            <div class="incomplete-section">
-              <p class="warning">
-                Completa la separacion de todos los productos para marcar el pedido como listo
-              </p>
+          @if (selectedPicking?.pickingSession) {
+            @if (reloadingDetail) {
+              <p class="refreshing-note">Actualizando datos de picking...</p>
+            }
+            <div class="overall-progress">
+              <h3>Progreso General</h3>
+              <div class="progress-bar-large">
+                <div class="progress-fill" [style.width.%]="selectedPicking.summary?.progress || 0"></div>
+              </div>
+              <p class="progress-text-large">{{ selectedPicking.summary?.progress || 0 }}% completado</p>
             </div>
+
+            <div class="items-to-pick">
+              <h3>Productos a Preparar</h3>
+              <table class="picking-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Variante</th>
+                    <th>Solicitada</th>
+                    <th>Separada</th>
+                    <th>Faltante</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of selectedPicking.items; track item.pickingItemId ?? item.variantId ?? $index) {
+                    <tr [class.completed]="item.status === 'COMPLETED'">
+                      <td>{{ item.variant?.product?.name || "Producto" }}</td>
+                      <td>{{ item.variant?.color?.name || "-" }} - {{ item.variant?.size?.name || "-" }}</td>
+                      <td class="quantity">{{ item.requestedQuantity }}</td>
+                      <td class="quantity">{{ item.pickedQuantity }}</td>
+                      <td class="quantity">{{ item.missingQuantity }}</td>
+                      <td>
+                        <span class="item-status" [class]="'item-status ' + getItemStatusClass(item.status)">
+                          {{ getItemStatusLabel(item.status) }}
+                        </span>
+                      </td>
+                      <td class="actions">
+                        <button type="button" (click)="markItemUnpicked(item)" class="btn-minus" [disabled]="isItemUpdating(item) || item.pickedQuantity <= 0">
+                          -
+                        </button>
+                        <span class="counter">{{ item.pickedQuantity }}</span>
+                        <button
+                          type="button"
+                          (click)="markItemPicked(item)"
+                          class="btn-plus"
+                          [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          (click)="markItemComplete(item)"
+                          class="btn-mark-complete"
+                          [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
+                        >
+                          Completar
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (selectedPicking.summary?.completed) {
+              <div class="complete-section">
+                @if (!isPickingFinalized()) {
+                  <div class="completion-message">Todos los productos han sido separados</div>
+                  <button type="button" (click)="completeOrder()" class="btn-complete-order" [disabled]="completingPicking">
+                    {{ completingPicking ? "Finalizando..." : "Finalizar preparacion" }}
+                  </button>
+                } @else {
+                  <p class="completion-final-message">Preparacion finalizada. Pedido listo para entrega.</p>
+                }
+              </div>
+            }
+
+            @if (!selectedPicking.summary?.completed) {
+              <div class="incomplete-section">
+                <p class="warning">
+                  Completa la separacion de todos los productos para dejar el pedido listo
+                </p>
+              </div>
+            }
           }
         </div>
       }

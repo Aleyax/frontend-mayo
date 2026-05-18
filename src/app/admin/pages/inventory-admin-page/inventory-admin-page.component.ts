@@ -1,6 +1,7 @@
 ﻿import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { InventoryService } from '../../../inventory/services/inventory.service';
 import { Inventory } from '../../../inventory/interfaces/inventory.interface';
 import { Subject } from 'rxjs';
@@ -32,6 +33,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
   private alertService = inject(AlertService);
   private storeService = inject(StoreService);
   private productService = inject(ProductService);
+  private router = inject(Router);
 
   inventoryData = signal<Inventory[]>([]);
   productCatalog = signal<Product[]>([]);
@@ -319,8 +321,8 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  showTransferNotice() {
-    this.alertService.show('Transferencias pendiente de implementación', 'info', 3000);
+  openTransfersModule() {
+    this.router.navigate(['/admin/transfers']);
   }
 
   closeMovementDrawer() {

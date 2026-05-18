@@ -2,7 +2,12 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Inventory, InventoryMovement, InventoryMovementType } from '../interfaces/inventory.interface';
+import {
+  Inventory,
+  InventoryMovement,
+  InventoryMovementType,
+  StockTransfer
+} from '../interfaces/inventory.interface';
 
 const baseurl = environment.apiUrl;
 
@@ -52,5 +57,25 @@ export class InventoryService {
       quantity: body.quantity,
       note: body.note,
     });
+  }
+
+  listTransfers(): Observable<StockTransfer[]> {
+    return this.http.get<StockTransfer[]>(`${baseurl}/inventory/transfers`);
+  }
+
+  createStockTransfer(body: {
+    fromStoreId: number;
+    toStoreId: number;
+    items: Array<{ variantId: number; quantity: number }>;
+    note?: string;
+  }): Observable<StockTransfer> {
+    return this.http.post<StockTransfer>(`${baseurl}/inventory/transfers`, body);
+  }
+
+  receiveStockTransfer(transferId: number): Observable<{ transfer: StockTransfer; inventories: Inventory[] }> {
+    return this.http.patch<{ transfer: StockTransfer; inventories: Inventory[] }>(
+      `${baseurl}/inventory/transfers/${transferId}/receive`,
+      {}
+    );
   }
 }

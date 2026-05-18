@@ -31,6 +31,10 @@ export const adminDashboardRoute: Routes = [
         loadComponent: () => import('./pages/inventory-admin-page/inventory-admin-page.component').then(m => m.InventoryAdminPageComponent)
       },
       {
+        path: 'transfers',
+        loadComponent: () => import('./pages/transfer-admin-page/transfer-admin-page.component').then(m => m.TransferAdminPageComponent)
+      },
+      {
         path: 'stores',
         loadComponent: () => import('./pages/store-admin-page/store-admin-page.component').then(m => m.StoreAdminPageComponent)
       },

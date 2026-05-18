@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { OrderService } from '../services/order.service';
+import { OrderService, OrderStatus } from '../services/order.service';
 import { StoreService } from '../../store/services/store.service';
+import { AlertService } from '../../shared/services/alert.service';
 
 type OrdersFilters = {
   status?: string;
@@ -121,7 +122,8 @@ export class OrdersListComponent implements OnInit {
     private fb: FormBuilder,
     private router: Router,
     private orderService: OrderService,
-    private storeService: StoreService
+    private storeService: StoreService,
+    private alertService: AlertService
   ) {}
 
   ngOnInit() {
@@ -288,7 +290,7 @@ export class OrdersListComponent implements OnInit {
     this.selectedOrder = null;
   }
 
-  updateOrderStatus(order: any, newStatus: string) {
+  updateOrderStatus(order: any, newStatus: OrderStatus) {
     if (!confirm(`Cambiar estado a ${this.orderStatusLabels[newStatus]}?`)) {
       return;
     }
@@ -298,7 +300,7 @@ export class OrdersListComponent implements OnInit {
         this.ordersResource.reload();
       },
       error: (error) => {
-        alert(`Error: ${error?.error?.error || 'Error al actualizar'}`);
+        this.alertService.show(error?.error?.error || 'Error al actualizar', 'error');
       }
     });
   }

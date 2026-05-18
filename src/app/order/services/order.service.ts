@@ -3,6 +3,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export type OrderStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'WAITING_TRANSFER'
+  | 'PREPARING'
+  | 'READY'
+  | 'DELIVERED'
+  | 'CANCELLED'
+  | 'WAITING_STOCK';
+
+export type OrderResponsibleRole = 'seller' | 'picker' | 'dispenser';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -39,7 +51,7 @@ export class OrderService {
   }
 
   // Actualizar estado del pedido
-  updateOrderStatus(id: number, status: string, note?: string): Observable<any> {
+  updateOrderStatus(id: number, status: OrderStatus, note?: string): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/status`, {
       status,
       note
@@ -51,8 +63,33 @@ export class OrderService {
     return this.http.patch(`${this.apiUrl}/${id}/picking`, pickingData);
   }
 
+  // Obtener reservas de una orden
+  getOrderReservations(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${id}/reservations`);
+  }
+
+  // Obtener picking de una orden
+  getOrderPicking(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${id}/picking`);
+  }
+
+  // Iniciar picking de una orden
+  startOrderPicking(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/picking/start`, {});
+  }
+
+  // Actualizar item de picking
+  updatePickingItem(itemId: number, pickedQuantity: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/picking/items/${itemId}`, { pickedQuantity });
+  }
+
+  // Completar picking de una orden
+  completeOrderPicking(id: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/picking/complete`, {});
+  }
+
   // Asignar responsable
-  assignResponsible(id: number, roleType: string, userId: number): Observable<any> {
+  assignResponsible(id: number, roleType: OrderResponsibleRole, userId: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/assign`, {
       roleType,
       userId

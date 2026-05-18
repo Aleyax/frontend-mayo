@@ -2,8 +2,9 @@ import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { OrderService } from '../services/order.service';
+import { OrderResponsibleRole, OrderService, OrderStatus } from '../services/order.service';
 import { UserService } from '../../shared/services/user.service';
+import { AlertService } from '../../shared/services/alert.service';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, timeout } from 'rxjs';
 
@@ -22,6 +23,7 @@ export class OrderDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly orderService = inject(OrderService);
   private readonly userService = inject(UserService);
+  private readonly alertService = inject(AlertService);
 
   private readonly orderId = toSignal(
     this.route.params.pipe(
@@ -49,6 +51,9 @@ export class OrderDetailComponent implements OnInit {
   );
 
   private readonly lastAutoPrintedOrderId = signal<number | null>(null);
+  private cachedOrder: any | undefined = undefined;
+  private cachedPickingData: any | null = null;
+  private wasReloadingPicking = false;
 
   readonly orderResource = rxResource<any, number | undefined>({
     params: () => this.orderId(),
@@ -71,6 +76,22 @@ export class OrderDetailComponent implements OnInit {
       )
   });
 
+  readonly pickingResource = rxResource<any | null, number | undefined>({
+    params: () => this.orderId(),
+    defaultValue: null,
+    stream: ({ params }) => {
+      if (!params) {
+        return of(null);
+      }
+
+      return this.orderService.getOrderPicking(params).pipe(
+        timeout(12000),
+        map((response: any) => response?.data || null),
+        catchError(() => of(null))
+      );
+    }
+  });
+
   statusForm!: FormGroup;
   assignForm!: FormGroup;
 
@@ -78,6 +99,9 @@ export class OrderDetailComponent implements OnInit {
   showAssignModal = false;
   showDeliverModal = false;
   printLayout: PrintLayout = 'invoice';
+  startingPicking = false;
+  finishingPicking = false;
+  updatingPickingItemIds = new Set<number>();
 
   orderStatusLabels: Record<string, string> = {
     PENDING: 'Pendiente',
@@ -114,7 +138,51 @@ export class OrderDetailComponent implements OnInit {
 
   constructor() {
     effect(() => {
+      const currentOrder = this.orderResource.value();
+      if (currentOrder) {
+        this.cachedOrder = currentOrder;
+      }
+    });
+
+    effect(() => {
+      const currentOrderId = this.orderId();
+      const currentOrder = this.orderResource.value();
+      if (!currentOrderId || currentOrder) {
+        return;
+      }
+
+      if (this.cachedOrder && Number(this.cachedOrder.id) !== Number(currentOrderId)) {
+        this.cachedOrder = undefined;
+      }
+    });
+
+    effect(() => {
+      const currentPicking = this.pickingResource.value();
+      const currentOrderId = Number(this.orderId() || 0);
+
+      if (
+        currentPicking &&
+        Number(currentPicking.orderId || 0) > 0 &&
+        Number(currentPicking.orderId || 0) === currentOrderId
+      ) {
+        this.cachedPickingData = currentPicking;
+      }
+
+      if (!currentOrderId) {
+        this.cachedPickingData = null;
+      }
+    });
+
+    effect(() => {
       this.printLayout = this.preferredPrintLayout();
+    });
+
+    effect(() => {
+      const isReloading = this.reloadingPicking;
+      if (isReloading && !this.wasReloadingPicking) {
+        this.alertService.show('Actualizando datos de picking...', 'info', 900);
+      }
+      this.wasReloadingPicking = isReloading;
     });
 
     effect(() => {
@@ -144,11 +212,11 @@ export class OrderDetailComponent implements OnInit {
   }
 
   get order(): any | undefined {
-    return this.orderResource.value();
+    return this.orderResource.value() || this.cachedOrder;
   }
 
   get loading(): boolean {
-    return this.orderResource.isLoading();
+    return this.orderResource.isLoading() && !this.order;
   }
 
   get loadError(): string {
@@ -169,15 +237,37 @@ export class OrderDetailComponent implements OnInit {
     return this.usersResource.value() || [];
   }
 
+  get pickingData(): any | null {
+    const livePicking = this.pickingResource.value();
+    if (livePicking) {
+      return livePicking;
+    }
+
+    const currentOrderId = Number(this.orderId() || this.order?.id || 0);
+    if (!this.cachedPickingData || currentOrderId <= 0) {
+      return null;
+    }
+
+    return Number(this.cachedPickingData.orderId || 0) === currentOrderId ? this.cachedPickingData : null;
+  }
+
+  get loadingPicking(): boolean {
+    return this.pickingResource.isLoading() && !this.pickingData;
+  }
+
+  get reloadingPicking(): boolean {
+    return this.pickingResource.isLoading() && !!this.pickingData;
+  }
+
   initializeForms() {
     this.statusForm = this.fb.group({
-      status: ['', Validators.required],
+      status: [null as OrderStatus | null, Validators.required],
       note: ['']
     });
 
     this.assignForm = this.fb.group({
-      roleType: ['', Validators.required],
-      userId: ['', Validators.required]
+      roleType: [null as OrderResponsibleRole | null, Validators.required],
+      userId: [null as number | null, Validators.required]
     });
   }
 
@@ -201,20 +291,24 @@ export class OrderDetailComponent implements OnInit {
     }
 
     const { status, note } = this.statusForm.value;
-    this.orderService.updateOrderStatus(orderId, status, note).subscribe(
+    const normalizedStatus = String(status || '').trim().toUpperCase() as OrderStatus;
+    this.orderService.updateOrderStatus(orderId, normalizedStatus, note).subscribe(
       () => {
-        alert('Estado actualizado exitosamente');
+        this.alertService.show('Estado actualizado exitosamente', 'success');
         this.showStatusModal = false;
         this.orderResource.reload();
       },
       (error) => {
-        alert(`Error: ${error.error?.error || 'Error al actualizar estado'}`);
+        this.alertService.show(error.error?.error || 'Error al actualizar estado', 'error');
       }
     );
   }
 
   openAssignModal() {
-    this.assignForm.reset();
+    this.assignForm.reset({
+      roleType: null,
+      userId: null
+    });
     this.showAssignModal = true;
   }
 
@@ -225,14 +319,28 @@ export class OrderDetailComponent implements OnInit {
     }
 
     const { roleType, userId } = this.assignForm.value;
-    this.orderService.assignResponsible(orderId, roleType, userId).subscribe(
+    const normalizedRole = String(roleType || '').trim().toLowerCase() as OrderResponsibleRole;
+    const normalizedUserId = Number(userId);
+    const validRoles: OrderResponsibleRole[] = ['seller', 'picker', 'dispenser'];
+
+    if (!validRoles.includes(normalizedRole)) {
+      this.alertService.show('Debes seleccionar un rol valido', 'warning');
+      return;
+    }
+
+    if (!Number.isInteger(normalizedUserId) || normalizedUserId < 1) {
+      this.alertService.show('Debes seleccionar un usuario valido', 'warning');
+      return;
+    }
+
+    this.orderService.assignResponsible(orderId, normalizedRole, normalizedUserId).subscribe(
       () => {
-        alert('Responsable asignado exitosamente');
+        this.alertService.show('Responsable asignado exitosamente', 'success');
         this.showAssignModal = false;
         this.orderResource.reload();
       },
       (error) => {
-        alert(`Error: ${error.error?.error || 'Error al asignar responsable'}`);
+        this.alertService.show(error.error?.error || 'Error al asignar responsable', 'error');
       }
     );
   }
@@ -241,7 +349,7 @@ export class OrderDetailComponent implements OnInit {
     if (this.order?.status === 'READY') {
       this.showDeliverModal = true;
     } else {
-      alert('El pedido debe estar en estado READY para entregarlo');
+      this.alertService.show('El pedido debe estar en estado READY para entregarlo', 'warning');
     }
   }
 
@@ -251,12 +359,12 @@ export class OrderDetailComponent implements OnInit {
 
     this.orderService.updateOrderStatus(orderId, 'DELIVERED', 'Pedido entregado').subscribe(
       () => {
-        alert('Pedido entregado exitosamente');
+        this.alertService.show('Pedido entregado exitosamente', 'success');
         this.showDeliverModal = false;
         this.orderResource.reload();
       },
       (error) => {
-        alert(`Error: ${error.error?.error || 'Error al entregar pedido'}`);
+        this.alertService.show(error.error?.error || 'Error al entregar pedido', 'error');
       }
     );
   }
@@ -321,6 +429,148 @@ export class OrderDetailComponent implements OnInit {
     if (status === 'RELEASED') return 'Liberada';
     if (status === 'COMPLETED') return 'Consumida';
     return status || '-';
+  }
+
+  getPickingItemsForDetail(): any[] {
+    if (Array.isArray(this.pickingData?.items)) {
+      return this.pickingData.items;
+    }
+
+    const orderItems = this.order?.items || [];
+    return orderItems.map((item: any) => {
+      const requestedQuantity = Number(item?.quantity || 0);
+      const pickedQuantity = this.getPickedQuantity(item);
+      const missingQuantity = Math.max(0, requestedQuantity - pickedQuantity);
+      return {
+        pickingItemId: null,
+        variantId: item?.variantId,
+        variant: item?.variant,
+        requestedQuantity,
+        pickedQuantity,
+        missingQuantity,
+        status: this.getPickingStatus(item)
+      };
+    });
+  }
+
+  canStartPickingFromDetail(): boolean {
+    const order = this.order;
+    if (!order || this.startingPicking) return false;
+
+    if (this.pickingData?.pickingSession) return false;
+    const status = String(order.status || '').toUpperCase();
+    return status === 'CONFIRMED' || status === 'PREPARING' || status === 'WAITING_TRANSFER';
+  }
+
+  canCompletePickingFromDetail(): boolean {
+    if (!this.pickingData?.pickingSession || this.finishingPicking) return false;
+    if (this.isPickingFinalizedForDetail()) return false;
+    return !!this.pickingData?.summary?.completed;
+  }
+
+  isPickingFinalizedForDetail(): boolean {
+    const sessionStatus = String(this.pickingData?.pickingSession?.status || '').toUpperCase();
+    const orderStatus = String(this.order?.status || this.pickingData?.orderStatus || '').toUpperCase();
+    return sessionStatus === 'COMPLETED' && (orderStatus === 'READY' || orderStatus === 'DELIVERED');
+  }
+
+  getPickingProgressForDetail(): number {
+    const progress = Number(this.pickingData?.summary?.progress);
+    if (Number.isFinite(progress)) {
+      return Math.max(0, Math.min(100, progress));
+    }
+
+    const items = this.getPickingItemsForDetail();
+    const totalRequested = items.reduce((sum: number, item: any) => sum + Number(item.requestedQuantity || 0), 0);
+    const totalPicked = items.reduce((sum: number, item: any) => sum + Number(item.pickedQuantity || 0), 0);
+    if (totalRequested <= 0) return 0;
+    return Math.round((totalPicked / totalRequested) * 100);
+  }
+
+  getPickingItemStatusLabel(status: string): string {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'COMPLETED') return 'Completo';
+    if (normalized === 'PARTIAL') return 'Parcial';
+    return 'Pendiente';
+  }
+
+  getPickingItemStatusClass(status: string): string {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'COMPLETED') return 'picked';
+    if (normalized === 'PARTIAL') return 'partial';
+    return 'pending';
+  }
+
+  isPickingItemUpdating(item: any): boolean {
+    const itemId = Number(item?.pickingItemId || 0);
+    return itemId > 0 && this.updatingPickingItemIds.has(itemId);
+  }
+
+  startPickingFromDetail() {
+    const orderId = this.orderId();
+    if (!orderId || !this.canStartPickingFromDetail()) return;
+
+    this.startingPicking = true;
+    this.orderService.startOrderPicking(orderId).subscribe({
+      next: () => {
+        this.startingPicking = false;
+        this.orderResource.reload();
+        this.pickingResource.reload();
+      },
+      error: (error) => {
+        this.startingPicking = false;
+        this.alertService.show(error?.error?.error || 'No se pudo iniciar picking', 'error');
+      }
+    });
+  }
+
+  markPickingItemFromDetail(item: any, action: 'inc' | 'dec' | 'complete') {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (!pickingItemId || this.updatingPickingItemIds.has(pickingItemId)) {
+      return;
+    }
+
+    const requested = Number(item?.requestedQuantity || 0);
+    const current = Number(item?.pickedQuantity || 0);
+    let nextQuantity = current;
+
+    if (action === 'inc') nextQuantity = Math.min(requested, current + 1);
+    if (action === 'dec') nextQuantity = Math.max(0, current - 1);
+    if (action === 'complete') nextQuantity = requested;
+
+    if (nextQuantity === current) return;
+
+    this.updatingPickingItemIds.add(pickingItemId);
+    this.orderService.updatePickingItem(pickingItemId, nextQuantity).subscribe({
+      next: () => {
+        this.updatingPickingItemIds.delete(pickingItemId);
+        this.orderResource.reload();
+        this.pickingResource.reload();
+      },
+      error: (error) => {
+        this.updatingPickingItemIds.delete(pickingItemId);
+        this.alertService.show(error?.error?.error || 'No se pudo actualizar item de picking', 'error');
+      }
+    });
+  }
+
+  completePickingFromDetail() {
+    const orderId = this.orderId();
+    if (!orderId || !this.canCompletePickingFromDetail()) return;
+
+    this.finishingPicking = true;
+    this.orderService.completeOrderPicking(orderId).subscribe({
+      next: () => {
+        this.finishingPicking = false;
+        this.orderResource.reload();
+        this.pickingResource.reload();
+        this.alertService.show('Picking finalizado. El pedido quedo en estado READY.', 'success');
+      },
+      error: (error) => {
+        this.finishingPicking = false;
+        this.alertService.show(error?.error?.error || 'No se pudo finalizar picking', 'error');
+      }
+    });
   }
 
   getPrintItemDescription(item: any): string {
