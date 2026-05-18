@@ -78,3 +78,22 @@
     transform: translateX(30px);
   }
 }
+
+@media print {
+  .drawer-toggle,
+  .drawer-side,
+  .drawer-content > .navbar {
+    display: none !important;
+  }
+
+  .drawer,
+  .drawer-content {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .drawer-content > .p-4 {
+    padding: 0 !important;
+  }
+}

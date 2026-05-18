@@ -7,6 +7,8 @@ import { UserService } from '../../shared/services/user.service';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, timeout } from 'rxjs';
 
+type PrintLayout = 'invoice' | 'ticket';
+
 @Component({
   selector: 'app-order-detail',
   templateUrl: './order-detail.component.html',
@@ -34,6 +36,16 @@ export class OrderDetailComponent implements OnInit {
   private readonly shouldAutoPrint = toSignal(
     this.route.queryParams.pipe(map((params) => String(params['print'] || '') === '1')),
     { initialValue: false }
+  );
+
+  private readonly preferredPrintLayout = toSignal(
+    this.route.queryParams.pipe(
+      map((params) => {
+        const rawLayout = String(params['style'] || params['printStyle'] || '').toLowerCase();
+        return rawLayout === 'ticket' ? 'ticket' : 'invoice';
+      })
+    ),
+    { initialValue: 'invoice' as PrintLayout }
   );
 
   private readonly lastAutoPrintedOrderId = signal<number | null>(null);
@@ -65,6 +77,7 @@ export class OrderDetailComponent implements OnInit {
   showStatusModal = false;
   showAssignModal = false;
   showDeliverModal = false;
+  printLayout: PrintLayout = 'invoice';
 
   orderStatusLabels: Record<string, string> = {
     PENDING: 'Pendiente',
@@ -100,6 +113,10 @@ export class OrderDetailComponent implements OnInit {
   };
 
   constructor() {
+    effect(() => {
+      this.printLayout = this.preferredPrintLayout();
+    });
+
     effect(() => {
       const order = this.order;
       const shouldPrint = this.shouldAutoPrint();
@@ -304,6 +321,15 @@ export class OrderDetailComponent implements OnInit {
     if (status === 'RELEASED') return 'Liberada';
     if (status === 'COMPLETED') return 'Consumida';
     return status || '-';
+  }
+
+  getPrintItemDescription(item: any): string {
+    const productName = item?.variant?.product?.name || 'Producto';
+    const colorName = item?.variant?.color?.name || '';
+    const sizeName = item?.variant?.size?.name || '';
+
+    const details = [colorName, sizeName].filter((value: string) => value.trim().length > 0).join(' - ');
+    return details ? `${productName} (${details})` : productName;
   }
 
   getStatusProgress(): number {

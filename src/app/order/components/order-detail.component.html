@@ -10,327 +10,438 @@
 
 @if (!loading && order) {
   <div class="order-detail-container">
-    <div class="order-header">
-      <div class="header-left">
-        <h1>{{ order.code }}</h1>
-        <p class="client-info">{{ order.clientName || "Cliente" }} - {{ order.clientEmail || "" }}</p>
-      </div>
-      <div class="header-right">
-        <button (click)="printOrder()" class="btn-back">Imprimir</button>
-        <button (click)="goBack()" class="btn-back">&larr; Volver</button>
-      </div>
-    </div>
-
-    <div class="order-grid">
-      <div class="card">
-        <h3>Estado Operativo</h3>
-        <div class="status-badge" [style.backgroundColor]="getStatusColor(order.status)">
-          {{ getStatusLabel(order.status) }}
+    <div class="screen-content">
+      <div class="order-header">
+        <div class="header-left">
+          <h1>{{ order.code }}</h1>
+          <p class="client-info">{{ order.clientName || "Cliente" }} - {{ order.clientEmail || "" }}</p>
         </div>
-
-        <div class="status-progress-wrap">
-          <div class="status-progress-label">
-            <span>Progreso</span>
-            <strong>{{ getStatusProgress() }}%</strong>
+        <div class="header-right">
+          <div class="print-format-picker">
+            <label for="print-layout">Formato</label>
+            <select id="print-layout" [(ngModel)]="printLayout" class="print-layout-select">
+              <option value="invoice">Boleta A4</option>
+              <option value="ticket">Ticket termico</option>
+            </select>
           </div>
-          <div class="status-progress-track">
-            <div class="status-progress-fill" [style.width.%]="getStatusProgress()"></div>
-          </div>
+          <button (click)="printOrder()" class="btn-back">Imprimir</button>
+          <button (click)="goBack()" class="btn-back">&larr; Volver</button>
         </div>
+      </div>
 
-        <div class="status-transitions">
-          <p>Transiciones disponibles:</p>
-          @if (getNextStates().length > 0) {
-            <div class="transitions-list">
-              @for (state of getNextStates(); track state) {
-                <span class="transition-pill">{{ getStatusLabel(state) }}</span>
-              }
+      <div class="order-grid">
+        <div class="card">
+          <h3>Estado Operativo</h3>
+          <div class="status-badge" [style.backgroundColor]="getStatusColor(order.status)">
+            {{ getStatusLabel(order.status) }}
+          </div>
+
+          <div class="status-progress-wrap">
+            <div class="status-progress-label">
+              <span>Progreso</span>
+              <strong>{{ getStatusProgress() }}%</strong>
             </div>
-          }
-          @if (getNextStates().length === 0) {
-            <p class="no-transitions">Sin transiciones disponibles</p>
-          }
+            <div class="status-progress-track">
+              <div class="status-progress-fill" [style.width.%]="getStatusProgress()"></div>
+            </div>
+          </div>
+
+          <div class="status-transitions">
+            <p>Transiciones disponibles:</p>
+            @if (getNextStates().length > 0) {
+              <div class="transitions-list">
+                @for (state of getNextStates(); track state) {
+                  <span class="transition-pill">{{ getStatusLabel(state) }}</span>
+                }
+              </div>
+            }
+            @if (getNextStates().length === 0) {
+              <p class="no-transitions">Sin transiciones disponibles</p>
+            }
+          </div>
+          <button (click)="openStatusModal()" class="btn-action btn-primary" [disabled]="getNextStates().length === 0">
+            Cambiar Estado
+          </button>
         </div>
-        <button (click)="openStatusModal()" class="btn-action btn-primary" [disabled]="getNextStates().length === 0">
-          Cambiar Estado
-        </button>
+
+        <div class="card">
+          <h3>Informacion del Pedido</h3>
+          <div class="info-row">
+            <label>Codigo:</label>
+            <span>{{ order.code }}</span>
+          </div>
+          <div class="info-row">
+            <label>Canal:</label>
+            <span>{{ getSalesChannelLabel() }}</span>
+          </div>
+          <div class="info-row">
+            <label>Subtotal:</label>
+            <span>S/ {{ order.subtotal | number: "1.2-2" }}</span>
+          </div>
+          <div class="info-row">
+            <label>Impuesto (18%):</label>
+            <span>S/ {{ order.tax | number: "1.2-2" }}</span>
+          </div>
+          <div class="info-row total">
+            <label>Total:</label>
+            <span>S/ {{ order.total | number: "1.2-2" }}</span>
+          </div>
+          <div class="info-row">
+            <label>Fecha:</label>
+            <span>{{ order.createdAt | date: "short" }}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Pago</h3>
+          <div class="info-row">
+            <label>Metodo:</label>
+            <span>{{ getPaymentMethod() }}</span>
+          </div>
+          <div class="info-row">
+            <label>Referencia:</label>
+            <span>{{ getPaymentReference() }}</span>
+          </div>
+          <div class="info-row">
+            <label>Monto recibido:</label>
+            <span>No disponible</span>
+          </div>
+          <div class="info-row">
+            <label>Vuelto:</label>
+            <span>No disponible</span>
+          </div>
+          <div class="info-row">
+            <label>Nota:</label>
+            <span>{{ order.note || "-" }}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Responsables Operativos</h3>
+          <div class="responsibles">
+            <div class="responsible">
+              <label>Vendedor:</label>
+              <span>{{ order.sellerUser?.firstName }} {{ order.sellerUser?.lastName || "No asignado" }}</span>
+            </div>
+            <div class="responsible">
+              <label>Picker:</label>
+              <span>{{ order.pickerUser?.firstName }} {{ order.pickerUser?.lastName || "No asignado" }}</span>
+            </div>
+            <div class="responsible">
+              <label>Despachador:</label>
+              <span>{{ order.dispenserUser?.firstName }} {{ order.dispenserUser?.lastName || "No asignado" }}</span>
+            </div>
+            <div class="responsible">
+              <label>Asignado picking:</label>
+              <span>{{ order.pickingSession?.assignedUser?.firstName || "No asignado" }}</span>
+            </div>
+          </div>
+          <button (click)="openAssignModal()" class="btn-action btn-secondary">
+            Asignar Responsable
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>Ubicaciones</h3>
+          <div class="locations">
+            <div class="location">
+              <label>Tienda Origen:</label>
+              <span>{{ order.sourceStore?.name || "N/A" }}</span>
+            </div>
+            <div class="location">
+              <label>Tienda Fulfillment:</label>
+              <span>{{ order.fulfillmentStore?.name || "N/A" }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <h3>Informacion del Pedido</h3>
-        <div class="info-row">
-          <label>Codigo:</label>
-          <span>{{ order.code }}</span>
-        </div>
-        <div class="info-row">
-          <label>Canal:</label>
-          <span>{{ getSalesChannelLabel() }}</span>
-        </div>
-        <div class="info-row">
-          <label>Subtotal:</label>
-          <span>S/ {{ order.subtotal | number: "1.2-2" }}</span>
-        </div>
-        <div class="info-row">
-          <label>Impuesto (18%):</label>
-          <span>S/ {{ order.tax | number: "1.2-2" }}</span>
-        </div>
-        <div class="info-row total">
-          <label>Total:</label>
-          <span>S/ {{ order.total | number: "1.2-2" }}</span>
-        </div>
-        <div class="info-row">
-          <label>Fecha:</label>
-          <span>{{ order.createdAt | date: "short" }}</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Pago</h3>
-        <div class="info-row">
-          <label>Metodo:</label>
-          <span>{{ getPaymentMethod() }}</span>
-        </div>
-        <div class="info-row">
-          <label>Referencia:</label>
-          <span>{{ getPaymentReference() }}</span>
-        </div>
-        <div class="info-row">
-          <label>Monto recibido:</label>
-          <span>No disponible</span>
-        </div>
-        <div class="info-row">
-          <label>Vuelto:</label>
-          <span>No disponible</span>
-        </div>
-        <div class="info-row">
-          <label>Nota:</label>
-          <span>{{ order.note || "-" }}</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Responsables Operativos</h3>
-        <div class="responsibles">
-          <div class="responsible">
-            <label>Vendedor:</label>
-            <span>{{ order.sellerUser?.firstName }} {{ order.sellerUser?.lastName || "No asignado" }}</span>
-          </div>
-          <div class="responsible">
-            <label>Picker:</label>
-            <span>{{ order.pickerUser?.firstName }} {{ order.pickerUser?.lastName || "No asignado" }}</span>
-          </div>
-          <div class="responsible">
-            <label>Despachador:</label>
-            <span>{{ order.dispenserUser?.firstName }} {{ order.dispenserUser?.lastName || "No asignado" }}</span>
-          </div>
-          <div class="responsible">
-            <label>Asignado picking:</label>
-            <span>{{ order.pickingSession?.assignedUser?.firstName || "No asignado" }}</span>
-          </div>
-        </div>
-        <button (click)="openAssignModal()" class="btn-action btn-secondary">
-          Asignar Responsable
-        </button>
-      </div>
-
-      <div class="card">
-        <h3>Ubicaciones</h3>
-        <div class="locations">
-          <div class="location">
-            <label>Tienda Origen:</label>
-            <span>{{ order.sourceStore?.name || "N/A" }}</span>
-          </div>
-          <div class="location">
-            <label>Tienda Fulfillment:</label>
-            <span>{{ order.fulfillmentStore?.name || "N/A" }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card items-section">
-      <h3>Productos de la Orden</h3>
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Variante</th>
-            <th>Cantidad</th>
-            <th>Precio Unit.</th>
-            <th>Subtotal</th>
-            <th>Separado</th>
-            <th>Estado pick</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of order.items; track item.id ?? item.variantId ?? $index) {
-            <tr>
-              <td>{{ item.variant?.product?.name }}</td>
-              <td>
-                {{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}
-              </td>
-              <td>{{ item.quantity }}</td>
-              <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
-              <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
-              <td>{{ getPickedQuantity(item) }}/{{ item.quantity }}</td>
-              <td>
-                <span class="badge" [class.picked]="getPickingStatus(item) === 'COMPLETED'" [class.partial]="getPickingStatus(item) === 'PARTIAL'">
-                  {{ getPickingStatusLabel(item) }}
-                </span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card items-section">
-      <h3>Reservas de Stock</h3>
-      @if (order.reservations?.length > 0) {
+      <div class="card items-section">
+        <h3>Productos de la Orden</h3>
         <table class="items-table">
           <thead>
             <tr>
               <th>Producto</th>
               <th>Variante</th>
-              <th>Tienda</th>
-              <th>Cantidad reservada</th>
-              <th>Estado</th>
-              <th>Fecha</th>
+              <th>Cantidad</th>
+              <th>Precio Unit.</th>
+              <th>Subtotal</th>
+              <th>Separado</th>
+              <th>Estado pick</th>
             </tr>
           </thead>
           <tbody>
-            @for (reservation of order.reservations; track reservation.id) {
+            @for (item of order.items; track item.id ?? item.variantId ?? $index) {
               <tr>
-                <td>{{ reservation.inventory?.variant?.product?.name || "-" }}</td>
+                <td>{{ item.variant?.product?.name }}</td>
                 <td>
-                  {{ reservation.inventory?.variant?.color?.name || "-" }} -
-                  {{ reservation.inventory?.variant?.size?.name || "-" }}
+                  {{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}
                 </td>
-                <td>{{ reservation.inventory?.store?.name || "-" }}</td>
-                <td>{{ reservation.quantity }}</td>
-                <td>{{ getReservationStatusLabel(reservation.status) }}</td>
-                <td>{{ reservation.createdAt | date: "short" }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
+                <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
+                <td>{{ getPickedQuantity(item) }}/{{ item.quantity }}</td>
+                <td>
+                  <span class="badge" [class.picked]="getPickingStatus(item) === 'COMPLETED'" [class.partial]="getPickingStatus(item) === 'PARTIAL'">
+                    {{ getPickingStatusLabel(item) }}
+                  </span>
+                </td>
               </tr>
             }
           </tbody>
         </table>
-      } @else {
-        <p class="no-transitions">No hay reservas asociadas.</p>
-      }
-    </div>
+      </div>
 
-    <div class="card items-section">
-      <h3>Timeline de la Orden</h3>
-      <div class="timeline-list">
-        @for (event of getTimelineEvents(); track event.label + '-' + (event.date ? event.date.getTime() : $index)) {
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <strong>{{ event.label }}</strong>
-              <p>{{ event.description }}</p>
-              <small>{{ event.date ? (event.date | date: "short") : "Sin fecha" }}</small>
-            </div>
-          </div>
+      <div class="card items-section">
+        <h3>Reservas de Stock</h3>
+        @if (order.reservations?.length > 0) {
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Variante</th>
+                <th>Tienda</th>
+                <th>Cantidad reservada</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (reservation of order.reservations; track reservation.id) {
+                <tr>
+                  <td>{{ reservation.inventory?.variant?.product?.name || "-" }}</td>
+                  <td>
+                    {{ reservation.inventory?.variant?.color?.name || "-" }} -
+                    {{ reservation.inventory?.variant?.size?.name || "-" }}
+                  </td>
+                  <td>{{ reservation.inventory?.store?.name || "-" }}</td>
+                  <td>{{ reservation.quantity }}</td>
+                  <td>{{ getReservationStatusLabel(reservation.status) }}</td>
+                  <td>{{ reservation.createdAt | date: "short" }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="no-transitions">No hay reservas asociadas.</p>
         }
       </div>
-    </div>
 
-    <div class="action-buttons">
-      @if (order.status === "READY") {
-        <button
-          (click)="openDeliverModal()"
-          class="btn-action btn-success"
-        >
-          Entregar Pedido
-        </button>
+      <div class="card items-section">
+        <h3>Timeline de la Orden</h3>
+        <div class="timeline-list">
+          @for (event of getTimelineEvents(); track event.label + '-' + (event.date ? event.date.getTime() : $index)) {
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <strong>{{ event.label }}</strong>
+                <p>{{ event.description }}</p>
+                <small>{{ event.date ? (event.date | date: "short") : "Sin fecha" }}</small>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        @if (order.status === "READY") {
+          <button
+            (click)="openDeliverModal()"
+            class="btn-action btn-success"
+          >
+            Entregar Pedido
+          </button>
+        }
+      </div>
+
+      @if (showStatusModal) {
+        <div class="modal-overlay" (click)="showStatusModal = false">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h3>Cambiar Estado del Pedido</h3>
+            <form [formGroup]="statusForm">
+              <div class="form-group">
+                <label>Nuevo Estado</label>
+                <select formControlName="status" class="form-input">
+                  @for (state of getNextStates(); track state) {
+                    <option [value]="state">
+                      {{ getStatusLabel(state) }}
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nota (Opcional)</label>
+                <textarea formControlName="note" class="form-input" rows="3"></textarea>
+              </div>
+              <div class="modal-buttons">
+                <button type="button" (click)="submitStatusChange()" class="btn-submit">
+                  Confirmar
+                </button>
+                <button type="button" (click)="showStatusModal = false" class="btn-cancel">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      @if (showAssignModal) {
+        <div class="modal-overlay" (click)="showAssignModal = false">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h3>Asignar Responsable</h3>
+            <form [formGroup]="assignForm">
+              <div class="form-group">
+                <label>Rol</label>
+                <select formControlName="roleType" class="form-input">
+                  <option value="">Seleccionar rol</option>
+                  <option value="seller">Vendedor</option>
+                  <option value="picker">Picker</option>
+                  <option value="dispenser">Despachador</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Usuario</label>
+                <select formControlName="userId" class="form-input">
+                  <option value="">Seleccionar usuario</option>
+                  @for (user of users; track user.id) {
+                    <option [value]="user.id">
+                      {{ user.firstName }} {{ user.lastName }}
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="modal-buttons">
+                <button type="button" (click)="submitAssign()" class="btn-submit">
+                  Asignar
+                </button>
+                <button type="button" (click)="showAssignModal = false" class="btn-cancel">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      @if (showDeliverModal) {
+        <div class="modal-overlay" (click)="showDeliverModal = false">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h3>Confirmar Entrega</h3>
+            <p>Deseas marcar este pedido como entregado? No se puede deshacer esta accion.</p>
+            <div class="modal-buttons">
+              <button (click)="submitDeliver()" class="btn-submit">
+                Confirmar Entrega
+              </button>
+              <button (click)="showDeliverModal = false" class="btn-cancel">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       }
     </div>
 
-    @if (showStatusModal) {
-      <div class="modal-overlay" (click)="showStatusModal = false">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <h3>Cambiar Estado del Pedido</h3>
-          <form [formGroup]="statusForm">
-            <div class="form-group">
-              <label>Nuevo Estado</label>
-              <select formControlName="status" class="form-input">
-                @for (state of getNextStates(); track state) {
-                  <option [value]="state">
-                    {{ getStatusLabel(state) }}
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Nota (Opcional)</label>
-              <textarea formControlName="note" class="form-input" rows="3"></textarea>
-            </div>
-            <div class="modal-buttons">
-              <button type="button" (click)="submitStatusChange()" class="btn-submit">
-                Confirmar
-              </button>
-              <button type="button" (click)="showStatusModal = false" class="btn-cancel">
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
-
-    @if (showAssignModal) {
-      <div class="modal-overlay" (click)="showAssignModal = false">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <h3>Asignar Responsable</h3>
-          <form [formGroup]="assignForm">
-            <div class="form-group">
-              <label>Rol</label>
-              <select formControlName="roleType" class="form-input">
-                <option value="">Seleccionar rol</option>
-                <option value="seller">Vendedor</option>
-                <option value="picker">Picker</option>
-                <option value="dispenser">Despachador</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Usuario</label>
-              <select formControlName="userId" class="form-input">
-                <option value="">Seleccionar usuario</option>
-                @for (user of users; track user.id) {
-                  <option [value]="user.id">
-                    {{ user.firstName }} {{ user.lastName }}
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="modal-buttons">
-              <button type="button" (click)="submitAssign()" class="btn-submit">
-                Asignar
-              </button>
-              <button type="button" (click)="showAssignModal = false" class="btn-cancel">
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
-
-    @if (showDeliverModal) {
-      <div class="modal-overlay" (click)="showDeliverModal = false">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <h3>Confirmar Entrega</h3>
-          <p>Deseas marcar este pedido como entregado? No se puede deshacer esta accion.</p>
-          <div class="modal-buttons">
-            <button (click)="submitDeliver()" class="btn-submit">
-              Confirmar Entrega
-            </button>
-            <button (click)="showDeliverModal = false" class="btn-cancel">
-              Cancelar
-            </button>
+    <div class="print-content" [class.layout-invoice]="printLayout === 'invoice'" [class.layout-ticket]="printLayout === 'ticket'">
+      <section class="print-sheet print-sheet-invoice">
+        <div class="invoice-header">
+          <div class="invoice-brand">
+            <h2>{{ order.sourceStore?.name || "HYDRA COMPANY" }}</h2>
+            <p>{{ order.sourceStore?.address || "Direccion no registrada" }}</p>
+            <p>Telefono: {{ order.sourceStore?.phone || order.clientPhone || "-" }}</p>
+          </div>
+          <div class="invoice-meta">
+            <p class="invoice-doc">BOLETA DE VENTA</p>
+            <p class="invoice-code">{{ order.code }}</p>
+            <p>{{ order.createdAt | date: "dd/MM/yyyy HH:mm" }}</p>
           </div>
         </div>
-      </div>
-    }
+
+        <div class="invoice-client">
+          <div><strong>Cliente:</strong> {{ order.clientName || "Cliente varios" }}</div>
+          <div><strong>Correo:</strong> {{ order.clientEmail || "-" }}</div>
+          <div><strong>Telefono:</strong> {{ order.clientPhone || "-" }}</div>
+          <div><strong>Canal:</strong> {{ getSalesChannelLabel() }}</div>
+        </div>
+
+        <table class="invoice-items">
+          <thead>
+            <tr>
+              <th>Cantidad</th>
+              <th>Unidad</th>
+              <th>Descripcion</th>
+              <th>P. Unit.</th>
+              <th>Importe</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+              <tr>
+                <td>{{ item.quantity }}</td>
+                <td>UND</td>
+                <td>{{ getPrintItemDescription(item) }}</td>
+                <td>S/ {{ item.unitPrice | number: "1.2-2" }}</td>
+                <td>S/ {{ item.subtotal | number: "1.2-2" }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="invoice-summary">
+          <div><span>Subtotal</span><strong>S/ {{ order.subtotal | number: "1.2-2" }}</strong></div>
+          <div><span>IGV (18%)</span><strong>S/ {{ order.tax | number: "1.2-2" }}</strong></div>
+          <div class="total"><span>Total</span><strong>S/ {{ order.total | number: "1.2-2" }}</strong></div>
+        </div>
+
+        <div class="invoice-footer">
+          <p>Metodo de pago: {{ getPaymentMethod() }}</p>
+          <p>Referencia: {{ getPaymentReference() }}</p>
+          <p>Gracias por su compra.</p>
+        </div>
+      </section>
+
+      <section class="print-sheet print-sheet-ticket">
+        <div class="ticket-header">
+          <p class="ticket-title">{{ order.sourceStore?.name || "HYDRA COMPANY" }}</p>
+          <p>{{ order.sourceStore?.address || "Direccion no registrada" }}</p>
+          <p>{{ order.createdAt | date: "dd/MM/yyyy HH:mm" }}</p>
+          <p>Boleta: {{ order.code }}</p>
+        </div>
+
+        <div class="ticket-divider"></div>
+
+        <div class="ticket-client">
+          <p>Cliente: {{ order.clientName || "Cliente varios" }}</p>
+          <p>Canal: {{ getSalesChannelLabel() }}</p>
+        </div>
+
+        <div class="ticket-divider"></div>
+
+        <div class="ticket-items">
+          @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+            <div class="ticket-item">
+              <p class="ticket-item-name">{{ getPrintItemDescription(item) }}</p>
+              <p class="ticket-item-line">{{ item.quantity }} x S/ {{ item.unitPrice | number: "1.2-2" }} = S/ {{ item.subtotal | number: "1.2-2" }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="ticket-divider"></div>
+
+        <div class="ticket-summary">
+          <p><span>Subtotal</span><strong>S/ {{ order.subtotal | number: "1.2-2" }}</strong></p>
+          <p><span>IGV</span><strong>S/ {{ order.tax | number: "1.2-2" }}</strong></p>
+          <p class="ticket-total"><span>TOTAL</span><strong>S/ {{ order.total | number: "1.2-2" }}</strong></p>
+        </div>
+
+        <div class="ticket-divider"></div>
+
+        <div class="ticket-footer">
+          <p>Pago: {{ getPaymentMethod() }}</p>
+          <p>Ref: {{ getPaymentReference() }}</p>
+          <p>Gracias por su compra</p>
+        </div>
+      </section>
+    </div>
   </div>
 }
