@@ -47,6 +47,8 @@ export class TransferAdminPageComponent implements OnInit {
   statusFilter = signal<'ALL' | StockTransferStatus>('ALL');
 
   showCreateDrawer = signal<boolean>(false);
+  showTransferDetails = signal<boolean>(false);
+  selectedTransferDetails = signal<StockTransfer | null>(null);
   creatingTransfer = signal<boolean>(false);
   receivingTransferIds = signal<number[]>([]);
 
@@ -203,6 +205,16 @@ export class TransferAdminPageComponent implements OnInit {
 
   closeCreateTransferDrawer() {
     this.showCreateDrawer.set(false);
+  }
+
+  openTransferDetails(transfer: StockTransfer) {
+    this.selectedTransferDetails.set(transfer);
+    this.showTransferDetails.set(true);
+  }
+
+  closeTransferDetails() {
+    this.showTransferDetails.set(false);
+    this.selectedTransferDetails.set(null);
   }
 
   private resetCreateForm() {
@@ -410,24 +422,6 @@ export class TransferAdminPageComponent implements OnInit {
     const lastName = transfer.receivedBy?.lastName ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
     return fullName || '-';
-  }
-
-  getTransferItemsSummary(transfer: StockTransfer): string {
-    const items = transfer.items ?? [];
-    if (!items.length) {
-      return '-';
-    }
-
-    const summary = items
-      .slice(0, 2)
-      .map((item) => {
-        const productName = item.variant?.product?.name ?? 'Variante';
-        const sku = item.variant?.sku ?? `#${item.variantId}`;
-        return `${productName} (${sku}) x${item.quantity}`;
-      })
-      .join(', ');
-
-    return items.length > 2 ? `${summary} +${items.length - 2} mas` : summary;
   }
 
   getDraftRowVariantLabel(variantId: number | null): string {

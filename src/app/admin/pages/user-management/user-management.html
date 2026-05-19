@@ -3,7 +3,7 @@
 
   <div>
     <p class="text-sm text-gray-500 mb-1">Admin Dashboard</p>
-    <h1 class="text-2xl font-bold mb-4">Gestión de Usuarios</h1>
+    <h1 class="text-2xl font-bold mb-4">Gestion de Usuarios</h1>
   </div>
 
   <div>
@@ -39,23 +39,22 @@
             />
           </label>
         </div>
-        @if (authService.isAdmin()) {
+        @if (canCreateUsers) {
           <div>
             <button class="btn btn-primary" (click)="openModal()" [disabled]="isLoadingRoles">
               Agregar Usuario
             </button>
           </div>
         }
-        @if (isLoadingRoles) {}
       </div>
     </fieldset>
   </div>
 
   <div class="overflow-x-auto">
     <table class="table">
-      <thead class="">
+      <thead>
         <tr>
-          <th class="w-12">N°</th>
+          <th class="w-12">#</th>
           <th>Nombre</th>
           <th>Correo</th>
           <th>Rol</th>
@@ -103,23 +102,19 @@
               </td>
               <td>
                 <div class="flex gap-1 justify-center">
-                  @if (authService.isAdmin()) {
-                    <button
-                      class="btn btn-xs btn-ghost"
-                      title="Editar usuario"
-                      (click)="editUser(user)"
-                    >
-                      ✏️
+                  @if (canUpdateUsers) {
+                    <button class="btn btn-xs btn-ghost" title="Editar usuario" (click)="editUser(user)">
+                      Editar
                     </button>
-                    @if (user.id !== authService.getCurrentUser()?.id) {
-                      <button
-                        class="btn btn-xs btn-ghost text-error hover:bg-error/10"
-                        title="Eliminar usuario"
-                        (click)="deleteUser(user)"
-                      >
-                        🗑️
-                      </button>
-                    }
+                  }
+                  @if (canDeleteUsers && user.id !== authService.getCurrentUser()?.id) {
+                    <button
+                      class="btn btn-xs btn-ghost text-error hover:bg-error/10"
+                      title="Eliminar usuario"
+                      (click)="deleteUser(user)"
+                    >
+                      Eliminar
+                    </button>
                   }
                 </div>
               </td>
@@ -132,3 +127,4 @@
 
   <app-user-modal [roles]="roles" (userSaved)="onUserSaved($event)"></app-user-modal>
 </div>
+

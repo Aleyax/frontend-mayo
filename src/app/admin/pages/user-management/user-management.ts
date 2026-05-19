@@ -7,9 +7,11 @@ import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { AlertComponent } from '../../../shared/components/alert/alert.component';
 import { UserModalComponent } from '../../components/user-modal/user-modal';
+import { PermissionService } from '../../../auth/permission.service';
 
 @Component({
   selector: 'app-user-management',
+  standalone: true,
   imports: [CommonModule, UserModalComponent, FormsModule, AlertComponent],
   templateUrl: './user-management.html',
   styleUrls: ['./user-management.css']
@@ -29,8 +31,21 @@ export class UserManagementComponent implements OnInit {
     private userService: UserService,
     private alertService: AlertService,
     public authService: AuthService,
+    public permissionService: PermissionService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  get canCreateUsers(): boolean {
+    return this.permissionService.can('users.create');
+  }
+
+  get canUpdateUsers(): boolean {
+    return this.permissionService.can('users.update');
+  }
+
+  get canDeleteUsers(): boolean {
+    return this.permissionService.can('users.disable');
+  }
 
   ngOnInit() {
     this.searchText = '';

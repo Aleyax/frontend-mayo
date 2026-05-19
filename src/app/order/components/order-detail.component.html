@@ -174,7 +174,7 @@
 
       <div class="card items-section">
         <h3>Productos de la Orden</h3>
-        <table class="items-table">
+        <table class="items-table desktop-only">
           <thead>
             <tr>
               <th>Producto</th>
@@ -208,6 +208,45 @@
             }
           </tbody>
         </table>
+
+        <div class="mobile-table-cards mobile-only">
+          @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+            <article class="mobile-row-card">
+              <div class="mobile-row-header">
+                <h4 class="mobile-row-title">{{ item.variant?.product?.name || 'Producto' }}</h4>
+                <span
+                  class="badge"
+                  [class.picked]="getPickingStatus(item) === 'COMPLETED'"
+                  [class.partial]="getPickingStatus(item) === 'PARTIAL'"
+                >
+                  {{ getPickingStatusLabel(item) }}
+                </span>
+              </div>
+              <div class="mobile-fields">
+                <div class="mobile-field">
+                  <span>Variante</span>
+                  <strong>{{ item.variant?.color?.name || '-' }} - {{ item.variant?.size?.name || '-' }}</strong>
+                </div>
+                <div class="mobile-field">
+                  <span>Cantidad</span>
+                  <strong>{{ item.quantity }}</strong>
+                </div>
+                <div class="mobile-field">
+                  <span>Precio Unit.</span>
+                  <strong>S/ {{ item.unitPrice | number: '1.2-2' }}</strong>
+                </div>
+                <div class="mobile-field">
+                  <span>Subtotal</span>
+                  <strong>S/ {{ item.subtotal | number: '1.2-2' }}</strong>
+                </div>
+                <div class="mobile-field">
+                  <span>Separado</span>
+                  <strong>{{ getPickedQuantity(item) }}/{{ item.quantity }}</strong>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
       </div>
 
       <div class="card items-section">
@@ -243,7 +282,7 @@
             </div>
           </div>
 
-          <table class="items-table picking-items-table">
+          <table class="items-table picking-items-table desktop-only">
             <thead>
               <tr>
                 <th>Producto</th>
@@ -320,6 +359,80 @@
             </tbody>
           </table>
 
+          <div class="mobile-table-cards mobile-only">
+            @for (
+              item of getPickingItemsForDetail();
+              track item.pickingItemId ?? item.variantId ?? $index
+            ) {
+              <article class="mobile-row-card">
+                <div class="mobile-row-header">
+                  <h4 class="mobile-row-title">{{ item.variant?.product?.name || '-' }}</h4>
+                  <span
+                    class="badge"
+                    [class.picked]="getPickingItemStatusClass(item.status) === 'picked'"
+                    [class.partial]="getPickingItemStatusClass(item.status) === 'partial'"
+                  >
+                    {{ getPickingItemStatusLabel(item.status) }}
+                  </span>
+                </div>
+                <div class="mobile-fields">
+                  <div class="mobile-field">
+                    <span>Variante</span>
+                    <strong>{{ item.variant?.color?.name || '-' }} - {{ item.variant?.size?.name || '-' }}</strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Solicitada</span>
+                    <strong>{{ item.requestedQuantity }}</strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Separada</span>
+                    <strong>{{ item.pickedQuantity }}</strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Faltante</span>
+                    <strong>{{ item.missingQuantity }}</strong>
+                  </div>
+                </div>
+                @if (item.pickingItemId) {
+                  <div class="pick-actions mobile-pick-actions">
+                    <button
+                      type="button"
+                      class="pick-step-btn"
+                      (click)="markPickingItemFromDetail(item, 'dec')"
+                      [disabled]="isPickingItemUpdating(item) || item.pickedQuantity <= 0"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      class="pick-step-btn"
+                      (click)="markPickingItemFromDetail(item, 'inc')"
+                      [disabled]="
+                        isPickingItemUpdating(item) ||
+                        item.pickedQuantity >= item.requestedQuantity
+                      "
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      class="pick-complete-btn"
+                      (click)="markPickingItemFromDetail(item, 'complete')"
+                      [disabled]="
+                        isPickingItemUpdating(item) ||
+                        item.pickedQuantity >= item.requestedQuantity
+                      "
+                    >
+                      Completar
+                    </button>
+                  </div>
+                } @else {
+                  <span class="no-transitions">Sin sesion</span>
+                }
+              </article>
+            }
+          </div>
+
           @if (!isPickingFinalizedForDetail()) {
             <button
               type="button"
@@ -338,7 +451,7 @@
       <div class="card items-section">
         <h3>Reservas de Stock</h3>
         @if (order.reservations?.length > 0) {
-          <table class="items-table">
+          <table class="items-table desktop-only">
             <thead>
               <tr>
                 <th>Producto</th>
@@ -365,6 +478,40 @@
               }
             </tbody>
           </table>
+
+          <div class="mobile-table-cards mobile-only">
+            @for (reservation of order.reservations; track reservation.id) {
+              <article class="mobile-row-card">
+                <div class="mobile-row-header">
+                  <h4 class="mobile-row-title">{{ reservation.inventory?.variant?.product?.name || '-' }}</h4>
+                  <span class="badge">
+                    {{ getReservationStatusLabel(reservation.status) }}
+                  </span>
+                </div>
+                <div class="mobile-fields">
+                  <div class="mobile-field">
+                    <span>Variante</span>
+                    <strong>
+                      {{ reservation.inventory?.variant?.color?.name || '-' }} -
+                      {{ reservation.inventory?.variant?.size?.name || '-' }}
+                    </strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Tienda</span>
+                    <strong>{{ reservation.inventory?.store?.name || '-' }}</strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Cantidad reservada</span>
+                    <strong>{{ reservation.quantity }}</strong>
+                  </div>
+                  <div class="mobile-field">
+                    <span>Fecha</span>
+                    <strong>{{ reservation.createdAt | date: 'short' }}</strong>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
         } @else {
           <p class="no-transitions">No hay reservas asociadas.</p>
         }

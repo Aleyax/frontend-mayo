@@ -84,6 +84,7 @@ export class PosComponent implements OnInit {
   showVariantSelector = false;
   showPaymentDrawer = false;
   showSalesHistory = false;
+  showMobileCart = false;
 
   selectedProductForVariant: PosProduct | null = null;
   selectedVariant: PosVariant | null = null;
@@ -112,6 +113,10 @@ export class PosComponent implements OnInit {
   private remoteStockRequestId = 0;
 
   Math = Math;
+
+  get cartItemsCount(): number {
+    return this.cart.reduce((totalItems, item) => totalItems + Number(item.quantity || 0), 0);
+  }
 
   constructor(
     private fb: FormBuilder,
@@ -204,6 +209,7 @@ export class PosComponent implements OnInit {
       this.clearRemoteStockSuggestions();
       this.loadAvailableStockForStore();
       this.loadSalesHistory();
+      this.closeMobileCart();
       this.showToast('Tienda actualizada. El carrito fue reiniciado.', 'info');
       this.cdr.markForCheck();
     }
@@ -289,6 +295,7 @@ export class PosComponent implements OnInit {
   }
 
   openVariantSelector(product: PosProduct) {
+    this.closeMobileCart();
     this.selectedProductForVariant = product;
     this.selectedColor = product.variants[0]?.colorName || '';
     this.selectedSize = '';
@@ -411,6 +418,7 @@ export class PosComponent implements OnInit {
     this.selectedPaymentMethod = 'Efectivo';
     this.paymentForm.patchValue({ method: 'Efectivo', amountPaid: this.total });
     this.calculateChange();
+    this.closeMobileCart();
     this.showPaymentDrawer = true;
   }
 
@@ -613,7 +621,16 @@ export class PosComponent implements OnInit {
   }
 
   toggleSalesHistory() {
+    this.closeMobileCart();
     this.showSalesHistory = !this.showSalesHistory;
+  }
+
+  toggleMobileCart() {
+    this.showMobileCart = !this.showMobileCart;
+  }
+
+  closeMobileCart() {
+    this.showMobileCart = false;
   }
 
   getUniqueColors(product: PosProduct | null): Array<{ name: string; hex?: string | null; stock: number }> {

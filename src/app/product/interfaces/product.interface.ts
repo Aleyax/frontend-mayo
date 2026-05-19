@@ -2,6 +2,8 @@ import { Category } from '../../category/interfaces/category.interface';
 import { Color } from '../../color/interfaces/color.interface';
 import { Size } from '../../size/interfaces/size.interface';
 
+export type ProductVariantMode = 'MATRIX' | 'SIMPLE' | 'SIZE_ONLY';
+
 export interface ProductResponse {
   data: Product[];
   total: number;
@@ -21,6 +23,7 @@ export interface Product {
   category?: Pick<Category, 'id' | 'name'>;
   variantCount?: number;
   imageCount?: number;
+  variantMode?: ProductVariantMode;
   variants?: ProductVariant[];
   images?: Array<{ id: number; url: string }>;
 }
@@ -35,21 +38,24 @@ export interface ProductVariant {
   price: number;
   imageUrl?: string | null;
   isActive?: boolean;
-  color?: Pick<Color, 'id' | 'name' | 'hex'>;
-  size?: Pick<Size, 'id' | 'name'>;
+  isSimpleVariant?: boolean;
+  isSizeOnlyVariant?: boolean;
+  color?: Pick<Color, 'id' | 'name' | 'hex'> | null;
+  size?: Pick<Size, 'id' | 'name'> | null;
 }
 
 export interface ProductCreateRequest {
   name: string;
   description?: string;
   categoryId: number;
+  variantMode: ProductVariantMode;
   colorIds: number[];
   sizeIds: number[];
   imageUrls?: string[];
   imageFiles?: Array<{ filename: string; data: string }>;
   variants: Array<{
-    colorId: number;
-    sizeId: number;
+    colorId?: number;
+    sizeId?: number;
     price: number;
     imageUrl?: string | null;
     imageFile?: { filename: string; data: string };
@@ -61,13 +67,14 @@ export interface ProductUpdateRequest {
   description?: string;
   categoryId?: number;
   isActive?: boolean;
+  variantMode?: ProductVariantMode;
   colorIds?: number[];
   sizeIds?: number[];
   imageUrls?: string[];
   imageFiles?: Array<{ filename: string; data: string }>;
   variants?: Array<{
-    colorId: number;
-    sizeId: number;
+    colorId?: number;
+    sizeId?: number;
     price: number;
     imageUrl?: string | null;
     imageFile?: { filename: string; data: string };

@@ -1,3 +1,390 @@
-<p>
-  dashboard-home-page works!
-</p>
+<div class="dashboard-shell">
+  <section class="dashboard-header">
+    <div>
+      <p class="eyebrow">Panel operativo</p>
+      <h1>Dashboard principal</h1>
+      <p class="muted">Ventas, operacion diaria, stock y alertas en tiempo real.</p>
+    </div>
+    <div class="header-actions">
+      @if (lastUpdated(); as updatedAt) {
+        <span class="last-updated">Actualizado: {{ updatedAt | date:'short' }}</span>
+      }
+      <button type="button" class="btn btn-primary btn-sm" (click)="loadDashboard()" [disabled]="loading()">
+        {{ loading() ? 'Actualizando...' : 'Actualizar dashboard' }}
+      </button>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="alert alert-info rounded-box">
+      {{ loadingMessage() }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="alert alert-error rounded-box">
+      {{ error() }}
+    </div>
+  }
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <p class="kpi-label">Ventas hoy</p>
+      <p class="kpi-value">{{ kpis().salesToday }}</p>
+      <p class="kpi-foot" [class]="getTrendClass(metrics().salesVsYesterdayPct)">
+        {{ kpis().salesVsYesterdayLabel }}
+      </p>
+    </article>
+    <article class="kpi-card">
+      <p class="kpi-label">Ordenes hoy</p>
+      <p class="kpi-value">{{ kpis().ordersToday }}</p>
+      <p class="kpi-foot">Solo ordenes pagadas o completadas</p>
+    </article>
+    <article class="kpi-card">
+      <p class="kpi-label">Ticket promedio</p>
+      <p class="kpi-value">{{ kpis().avgTicketToday }}</p>
+      <p class="kpi-foot">Promedio por orden del dia</p>
+    </article>
+    <article class="kpi-card">
+      <p class="kpi-label">Productos criticos</p>
+      <p class="kpi-value">{{ kpis().criticalProducts }}</p>
+      <p class="kpi-foot">Sin stock + stock critico</p>
+    </article>
+  </section>
+
+  <section class="grid-two">
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Ventas por canal</h2>
+      </div>
+      <div class="channel-grid">
+        @for (item of metrics().salesByChannel; track item.channel) {
+          <div class="channel-card">
+            <p class="channel-name">{{ item.channel }}</p>
+            <p class="channel-value">{{ formatCurrency(item.total) }}</p>
+            <p class="channel-orders">{{ item.orders }} ordenes</p>
+          </div>
+        }
+      </div>
+      <div class="week-summary">
+        <p><strong>Semana actual:</strong> {{ weekSummary().sales }}</p>
+        <p><strong>Ordenes:</strong> {{ weekSummary().orders }}</p>
+        <p><strong>Ticket promedio:</strong> {{ weekSummary().ticket }}</p>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Alertas operativas</h2>
+      </div>
+      <div class="alerts-list">
+        @for (alert of metrics().alerts; track alert.label) {
+          <div class="alert-item" [class.has-value]="alert.value > 0">
+            <span>{{ alert.value }}</span>
+            <p>{{ alert.label }}</p>
+          </div>
+        }
+      </div>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Ventas por dia (ultimos 7 dias)</h2>
+    </div>
+    @if (metrics().salesTrend.length === 0) {
+      <p class="muted">Sin ventas recientes para mostrar.</p>
+    } @else {
+      <div class="trend-list">
+        @for (trend of metrics().salesTrend; track trend.label) {
+          <div class="trend-row">
+            <div class="trend-meta">
+              <strong>{{ trend.label }}</strong>
+              <span>{{ trend.orders }} ordenes</span>
+            </div>
+            <div class="trend-bar">
+              <div class="trend-fill" [style.width.%]="getSalesTrendWidth(trend.total, salesTrendMax())"></div>
+            </div>
+            <div class="trend-value">{{ formatCurrency(trend.total) }}</div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="grid-two">
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Top productos vendidos</h2>
+      </div>
+      <div class="subgrid">
+        <div>
+          <h3>Hoy</h3>
+          <div class="table-wrap">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (metrics().topProductsToday.length === 0) {
+                  <tr>
+                    <td colspan="3" class="empty-cell">Sin datos</td>
+                  </tr>
+                } @else {
+                  @for (item of metrics().topProductsToday; track item.label) {
+                    <tr>
+                      <td>{{ item.label }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ formatCurrency(item.total) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>Semana</h3>
+          <div class="table-wrap">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (metrics().topProductsWeek.length === 0) {
+                  <tr>
+                    <td colspan="3" class="empty-cell">Sin datos</td>
+                  </tr>
+                } @else {
+                  @for (item of metrics().topProductsWeek; track item.label) {
+                    <tr>
+                      <td>{{ item.label }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ formatCurrency(item.total) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Top variantes vendidas</h2>
+      </div>
+      <div class="subgrid">
+        <div>
+          <h3>Hoy</h3>
+          <div class="table-wrap">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Variante</th>
+                  <th>Cantidad</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (metrics().topVariantsToday.length === 0) {
+                  <tr>
+                    <td colspan="3" class="empty-cell">Sin datos</td>
+                  </tr>
+                } @else {
+                  @for (item of metrics().topVariantsToday; track item.label) {
+                    <tr>
+                      <td>{{ item.label }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ formatCurrency(item.total) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>Semana</h3>
+          <div class="table-wrap">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Variante</th>
+                  <th>Cantidad</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (metrics().topVariantsWeek.length === 0) {
+                  <tr>
+                    <td colspan="3" class="empty-cell">Sin datos</td>
+                  </tr>
+                } @else {
+                  @for (item of metrics().topVariantsWeek; track item.label) {
+                    <tr>
+                      <td>{{ item.label }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ formatCurrency(item.total) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid-two">
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Productos que deben reponerse</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Variante</th>
+              <th>Tienda</th>
+              <th>Disponible</th>
+              <th>Reservado</th>
+              <th>Recomendacion</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (metrics().replenishList.length === 0) {
+              <tr>
+                <td colspan="6" class="empty-cell">Sin productos para reponer por ahora.</td>
+              </tr>
+            } @else {
+              @for (row of metrics().replenishList; track row.product + row.store + row.variant) {
+                <tr>
+                  <td>{{ row.product }}</td>
+                  <td>{{ row.variant }}</td>
+                  <td>{{ row.store }}</td>
+                  <td>{{ row.available }}</td>
+                  <td>{{ row.reserved }}</td>
+                  <td>{{ row.recommendation }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Stock critico por nivel</h2>
+      </div>
+      <div class="stock-grid">
+        <div class="stock-card out">
+          <p>Sin stock</p>
+          <strong>{{ metrics().stockSummary.outOfStock }}</strong>
+        </div>
+        <div class="stock-card critical">
+          <p>Critico (1-3)</p>
+          <strong>{{ metrics().stockSummary.critical }}</strong>
+        </div>
+        <div class="stock-card low">
+          <p>Bajo (4-10)</p>
+          <strong>{{ metrics().stockSummary.low }}</strong>
+        </div>
+        <div class="stock-card normal">
+          <p>Normal (&gt;10)</p>
+          <strong>{{ metrics().stockSummary.normal }}</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid-two">
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Ordenes y picking pendientes</h2>
+      </div>
+      <div class="ops-grid">
+        <div class="ops-card">
+          <p>Ordenes PENDING</p>
+          <strong>{{ metrics().pendingOrders.pending }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Pagadas sin picking</p>
+          <strong>{{ metrics().pendingOrders.paidWithoutPicking }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Picking en progreso</p>
+          <strong>{{ metrics().pendingOrders.pickingInProgress }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Listas por entregar</p>
+          <strong>{{ metrics().pendingOrders.readyToDeliver }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Ordenes atrasadas (&gt;24h)</p>
+          <strong>{{ metrics().pendingOrders.overdue }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Picking completado hoy</p>
+          <strong>{{ metrics().picking.completedToday }}</strong>
+        </div>
+        <div class="ops-card">
+          <p>Tiempo prom. preparacion</p>
+          <strong>
+            @if (metrics().picking.avgPreparationMinutes !== null) {
+              {{ metrics().picking.avgPreparationMinutes | number:'1.0-0' }} min
+            } @else {
+              --
+            }
+          </strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Ventas por tienda (hoy)</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Tienda</th>
+              <th>Ventas hoy</th>
+              <th>Ordenes</th>
+              <th>Ticket promedio</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (metrics().salesByStore.length === 0) {
+              <tr>
+                <td colspan="4" class="empty-cell">Sin ventas por tienda para hoy.</td>
+              </tr>
+            } @else {
+              @for (row of metrics().salesByStore; track row.storeName) {
+                <tr>
+                  <td>{{ row.storeName }}</td>
+                  <td>{{ formatCurrency(row.total) }}</td>
+                  <td>{{ row.orders }}</td>
+                  <td>{{ formatCurrency(row.ticketAverage) }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+</div>

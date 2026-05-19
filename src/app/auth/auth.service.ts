@@ -68,13 +68,19 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  getCurrentUserRole(): string {
+    const user = this.getCurrentUser();
+    const rawRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
+    return String(rawRole || '').trim().toUpperCase();
+  }
+
   isAuthenticated(): boolean {
     return !!this.getToken();
   }
 
   hasRole(role: string): boolean {
-    const user = this.getCurrentUser();
-    return user && user.role === role;
+    const currentRole = this.getCurrentUserRole();
+    return currentRole === String(role || '').trim().toUpperCase();
   }
 
   isAdmin(): boolean {

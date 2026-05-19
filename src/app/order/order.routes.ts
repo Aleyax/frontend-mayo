@@ -3,6 +3,7 @@ import { PosComponent } from './components/pos.component';
 import { OrdersListComponent } from './components/orders-list.component';
 import { OrderDetailComponent } from './components/order-detail.component';
 import { PickingBoardComponent } from './components/picking-board.component';
+import { PermissionGuard } from '../auth/permission.guard';
 
 export const orderRoutes: Routes = [
   {
@@ -15,8 +16,9 @@ export const orderRoutes: Routes = [
       },
       {
         path: 'pos',
+        canActivate: [PermissionGuard],
+        data: { title: 'Crear Orden (POS)', permission: 'pos.view' },
         component: PosComponent,
-        data: { title: 'Crear Orden (POS)' }
       },
       {
         path: 'manage',
@@ -25,18 +27,21 @@ export const orderRoutes: Routes = [
       },
       {
         path: 'list',
+        canActivate: [PermissionGuard],
+        data: { title: 'Gestion de Pedidos', permission: 'orders.view' },
         component: OrdersListComponent,
-        data: { title: 'Gestion de Pedidos' }
       },
       {
         path: 'picking',
+        canActivate: [PermissionGuard],
+        data: { title: 'Tablero de Picking', permission: 'picking.view' },
         component: PickingBoardComponent,
-        data: { title: 'Tablero de Picking' }
       },
       {
         path: ':id',
+        canActivate: [PermissionGuard],
+        data: { title: 'Detalle del Pedido', permission: 'orders.detail.view' },
         component: OrderDetailComponent,
-        data: { title: 'Detalle del Pedido' }
       },
       {
         path: '',

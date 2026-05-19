@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-store-layout',
+  standalone: true,
   templateUrl: './store-layout.component.html',
   styleUrls: ['./store-layout.component.css'],
   imports: [RouterOutlet]

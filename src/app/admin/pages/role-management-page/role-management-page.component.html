@@ -1,0 +1,192 @@
+<div class="role-page">
+  <header class="page-header">
+    <div>
+      <p class="subtitle">Admin Dashboard</p>
+      <h1>Gestion de Roles</h1>
+    </div>
+
+    @if (canCreateRole) {
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        Crear Rol
+      </button>
+    }
+  </header>
+
+  <section class="filters-card">
+    <div class="filters-grid">
+      <input
+        type="text"
+        class="input input-bordered w-full"
+        placeholder="Buscar por nombre de rol"
+        [(ngModel)]="searchText"
+        (ngModelChange)="onFiltersChanged()"
+      />
+
+      <select class="select select-bordered w-full" [(ngModel)]="statusFilter" (ngModelChange)="onFiltersChanged()">
+        <option value="all">Todos</option>
+        <option value="active">Activos</option>
+        <option value="inactive">Inactivos</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="table-wrapper">
+    <table class="table table-zebra">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Rol</th>
+          <th>Descripcion</th>
+          <th>Estado</th>
+          <th>Usuarios</th>
+          <th>Creado</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading) {
+          <tr>
+            <td colspan="7" class="text-center py-8">
+              <span class="loading loading-spinner loading-md"></span>
+              <p class="mt-2">Cargando roles...</p>
+            </td>
+          </tr>
+        } @else if (filteredRoles.length === 0) {
+          <tr>
+            <td colspan="7" class="text-center py-8 text-base-content/60">
+              No hay roles para mostrar.
+            </td>
+          </tr>
+        } @else {
+          @for (role of filteredRoles; track role.id; let idx = $index) {
+            <tr>
+              <td>{{ idx + 1 }}</td>
+              <td class="font-medium">{{ role.name }}</td>
+              <td>{{ role.description || '-' }}</td>
+              <td>
+                <span class="badge" [class.badge-success]="role.isActive !== false" [class.badge-ghost]="role.isActive === false">
+                  {{ getRoleStatusLabel(role) }}
+                </span>
+              </td>
+              <td>{{ getUsersCount(role) }}</td>
+              <td>{{ role.createdAt ? (role.createdAt | date: 'shortDate') : '-' }}</td>
+              <td>
+                <div class="actions-cell">
+                  @if (canEditRole) {
+                    <button class="btn btn-xs btn-ghost" (click)="openEditModal(role)">
+                      Editar
+                    </button>
+                    <button class="btn btn-xs btn-ghost" (click)="toggleRoleStatus(role)">
+                      {{ role.isActive === false ? 'Activar' : 'Desactivar' }}
+                    </button>
+                  }
+
+                  @if (canManageRolePermissions) {
+                    <button class="btn btn-xs btn-outline" (click)="openPermissionsModal(role)">
+                      Permisos
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+</div>
+
+@if (showRoleModal) {
+  <div class="modal-backdrop" (click)="closeRoleModal()">
+    <section class="modal-content" (click)="$event.stopPropagation()">
+      <h2>{{ editingRoleId ? 'Editar rol' : 'Crear rol' }}</h2>
+
+      <label class="label">Nombre del rol</label>
+      <input
+        type="text"
+        class="input input-bordered w-full"
+        maxlength="50"
+        [(ngModel)]="roleForm.name"
+        placeholder="Ejemplo: WAREHOUSE"
+      />
+
+      <label class="label">Descripcion</label>
+      <textarea
+        class="textarea textarea-bordered w-full"
+        rows="3"
+        maxlength="180"
+        [(ngModel)]="roleForm.description"
+        placeholder="Describe para que sirve este rol"
+      ></textarea>
+
+      <label class="toggle-row">
+        <span>Rol activo</span>
+        <input type="checkbox" class="toggle toggle-primary" [(ngModel)]="roleForm.isActive" />
+      </label>
+
+      <div class="modal-actions">
+        @if (!editingRoleId && canManageRolePermissions) {
+          <button class="btn btn-outline" [disabled]="isSaving" (click)="saveRole(true)">
+            {{ isSaving ? 'Guardando...' : 'Guardar y permisos' }}
+          </button>
+        }
+        <button class="btn btn-primary" [disabled]="isSaving" (click)="saveRole()">
+          {{ isSaving ? 'Guardando...' : 'Guardar' }}
+        </button>
+        <button class="btn btn-ghost" [disabled]="isSaving" (click)="closeRoleModal()">
+          Cancelar
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if (showPermissionsModal) {
+  <div class="modal-backdrop" (click)="closePermissionsModal()">
+    <section class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <h2>Permisos del rol {{ selectedRoleForPermissions?.name }}</h2>
+
+      @if (isPermissionsLoading) {
+        <div class="text-center py-6">
+          <span class="loading loading-spinner loading-md"></span>
+          <p class="mt-2">Cargando permisos...</p>
+        </div>
+      } @else if (permissionGroups.length === 0) {
+        <p class="text-base-content/70 py-3">No hay permisos disponibles.</p>
+      } @else {
+        <div class="permission-grid">
+          @for (group of permissionGroups; track group.module) {
+            <section class="permission-group">
+              <h3>{{ getModuleLabel(group.module) }}</h3>
+              <div class="permission-list">
+                @for (permission of group.permissions; track permission.code) {
+                  <label class="permission-item">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm checkbox-primary"
+                      [checked]="isPermissionSelected(permission.code)"
+                      (change)="togglePermission(permission.code, $event)"
+                    />
+                    <div>
+                      <strong>{{ permission.name }}</strong>
+                      <p>{{ permission.description || permission.code }}</p>
+                    </div>
+                  </label>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      }
+
+      <div class="modal-actions">
+        <button class="btn btn-primary" [disabled]="isSavingPermissions || isPermissionsLoading" (click)="saveRolePermissions()">
+          {{ isSavingPermissions ? 'Guardando...' : 'Guardar permisos' }}
+        </button>
+        <button class="btn btn-ghost" [disabled]="isSavingPermissions" (click)="closePermissionsModal()">
+          Cerrar
+        </button>
+      </div>
+    </section>
+  </div>
+}

@@ -4,3 +4,91 @@
 @plugin "daisyui" {
   themes: all;
 }
+
+@media (max-width: 768px) {
+  table.mobile-card-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  table.mobile-card-table thead {
+    display: none !important;
+  }
+
+  table.mobile-card-table tbody {
+    display: block;
+  }
+
+  table.mobile-card-table tbody tr {
+    display: block;
+    border: 1px solid var(--color-base-300);
+    border-radius: 12px;
+    background: var(--color-base-100);
+    margin-bottom: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    box-shadow: 0 2px 8px color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  }
+
+  table.mobile-card-table tbody td,
+  table.mobile-card-table tbody th {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    text-align: left !important;
+    border: 0 !important;
+    padding: 0.4rem 0 !important;
+    background: transparent !important;
+    white-space: normal !important;
+  }
+
+  table.mobile-card-table tbody td > *,
+  table.mobile-card-table tbody th > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  table.mobile-card-table tbody td::before,
+  table.mobile-card-table tbody th::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+    font-weight: 700;
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  table.mobile-card-table tbody td[data-label=""]::before,
+  table.mobile-card-table tbody th[data-label=""]::before {
+    display: none;
+  }
+
+  table.mobile-card-table tbody td[data-label*="Accion"],
+  table.mobile-card-table tbody th[data-label*="Accion"],
+  table.mobile-card-table tbody td[data-label*="Action"],
+  table.mobile-card-table tbody th[data-label*="Action"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  table.mobile-card-table tbody td[data-label*="Accion"] > div,
+  table.mobile-card-table tbody th[data-label*="Accion"] > div,
+  table.mobile-card-table tbody td[data-label*="Action"] > div,
+  table.mobile-card-table tbody th[data-label*="Action"] > div {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
+  table.mobile-card-table tbody td[data-label*="Accion"] .btn,
+  table.mobile-card-table tbody th[data-label*="Accion"] .btn,
+  table.mobile-card-table tbody td[data-label*="Action"] .btn,
+  table.mobile-card-table tbody th[data-label*="Action"] .btn {
+    max-width: 100%;
+  }
+}

@@ -12,6 +12,7 @@ export interface Alert {
 export class AlertService {
   currentAlert = signal<Alert | null>(null);
   private alertCounter = 0;
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {}
 
@@ -19,16 +20,30 @@ export class AlertService {
     const id = `alert-${++this.alertCounter}`;
     const alert: Alert = { id, message, type };
 
-    this.currentAlert.set(alert);
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+
+    queueMicrotask(() => {
+      this.currentAlert.set(alert);
+    });
 
     if (duration > 0) {
-      setTimeout(() => {
+      this.closeTimer = setTimeout(() => {
         this.close();
       }, duration);
     }
   }
 
   close() {
-    this.currentAlert.set(null);
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+
+    queueMicrotask(() => {
+      this.currentAlert.set(null);
+    });
   }
 }

@@ -8,6 +8,7 @@ import { Size } from '../../../size/interfaces/size.interface';
 import {
   Product,
   ProductCreateRequest,
+  ProductVariantMode,
   ProductUpdateRequest,
   ProductVariant
 } from '../../../product/interfaces/product.interface';
@@ -42,6 +43,7 @@ export class ProductModalComponent implements OnInit {
   editingProduct = signal<Product | null>(null);
   variants = signal<ProductVariantForm[]>([]);
   productImages = signal<Array<{ file?: File; preview: string; url?: string; publicId?: string }>>([]);
+  variantMode = signal<ProductVariantMode>('MATRIX');
   selectedColorIds = signal<number[]>([]);
   selectedSizeIds = signal<number[]>([]);
   deletingImageIndex = signal<number | null>(null);
@@ -68,25 +70,66 @@ export class ProductModalComponent implements OnInit {
     this.formError.set('');
     this.variants.set([]);
     this.productImages.set([]);
+    this.variantMode.set('MATRIX');
     this.selectedColorIds.set([]);
     this.selectedSizeIds.set([]);
     this.editingProduct.set(product);
 
     if (product) {
-      const productVariantIds = product.variants?.map((variant) => variant.colorId) || [];
-      const productSizeIds = product.variants?.map((variant) => variant.sizeId) || [];
+      const productVariants = product.variants || [];
+      const isSimpleProduct =
+        product.variantMode === 'SIMPLE' ||
+        (productVariants.length === 1 && !!productVariants[0]?.isSimpleVariant);
+      const isSizeOnlyProduct =
+        product.variantMode === 'SIZE_ONLY' ||
+        (!!productVariants.length && productVariants.every((variant) => !!variant.isSizeOnlyVariant));
 
-      this.selectedColorIds.set([...new Set(productVariantIds)]);
-      this.selectedSizeIds.set([...new Set(productSizeIds)]);
-      this.variants.set(
-        (product.variants || []).map((variant) => ({
-          colorId: variant.colorId,
-          sizeId: variant.sizeId,
-          price: Number(variant.price),
-          imageUrl: variant.imageUrl || undefined,
-          imagePreview: variant.imageUrl || undefined,
-        })),
-      );
+      this.variantMode.set(isSimpleProduct ? 'SIMPLE' : (isSizeOnlyProduct ? 'SIZE_ONLY' : 'MATRIX'));
+
+      if (isSimpleProduct) {
+        const firstVariant = productVariants[0];
+        this.selectedColorIds.set([]);
+        this.selectedSizeIds.set([]);
+        this.variants.set(firstVariant ? [{
+          colorId: firstVariant.colorId || 0,
+          sizeId: firstVariant.sizeId || 0,
+          price: Number(firstVariant.price),
+          imageUrl: firstVariant.imageUrl || undefined,
+          imagePreview: firstVariant.imageUrl || undefined,
+        }] : [{
+          colorId: 0,
+          sizeId: 0,
+          price: 0,
+        }]);
+      } else if (isSizeOnlyProduct) {
+        const productSizeIds = productVariants.map((variant) => variant.sizeId).filter((id) => id > 0);
+        this.selectedColorIds.set([]);
+        this.selectedSizeIds.set([...new Set(productSizeIds)]);
+        this.variants.set(
+          productVariants.map((variant) => ({
+            colorId: variant.colorId || 0,
+            sizeId: variant.sizeId,
+            price: Number(variant.price),
+            imageUrl: variant.imageUrl || undefined,
+            imagePreview: variant.imageUrl || undefined,
+          })),
+        );
+      } else {
+        const productVariantIds = productVariants.map((variant) => variant.colorId);
+        const productSizeIds = productVariants.map((variant) => variant.sizeId);
+
+        this.selectedColorIds.set([...new Set(productVariantIds)]);
+        this.selectedSizeIds.set([...new Set(productSizeIds)]);
+        this.variants.set(
+          productVariants.map((variant) => ({
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+            price: Number(variant.price),
+            imageUrl: variant.imageUrl || undefined,
+            imagePreview: variant.imageUrl || undefined,
+          })),
+        );
+      }
       this.productImages.set(
         (product.images || []).map((image) => {
           const publicId = this.extractPublicIdFromUrl(image.url);
@@ -111,6 +154,7 @@ export class ProductModalComponent implements OnInit {
         categoryId: null,
         isActive: true,
       });
+      this.variantMode.set('MATRIX');
     }
   }
 
@@ -130,6 +174,46 @@ export class ProductModalComponent implements OnInit {
 
   get isEditing() {
     return this.editingProduct() !== null;
+  }
+
+  setVariantMode(mode: ProductVariantMode) {
+    if (this.variantMode() === mode) {
+      return;
+    }
+
+    this.variantMode.set(mode);
+    this.formError.set('');
+
+    if (mode === 'SIMPLE') {
+      const firstVariant = this.variants()[0];
+      this.selectedColorIds.set([]);
+      this.selectedSizeIds.set([]);
+      this.variants.set([{
+        colorId: firstVariant?.colorId ?? 0,
+        sizeId: firstVariant?.sizeId ?? 0,
+        price: Number(firstVariant?.price || 0),
+        imageUrl: firstVariant?.imageUrl,
+        imagePreview: firstVariant?.imagePreview || firstVariant?.imageUrl || undefined,
+        imageFile: firstVariant?.imageFile,
+      }]);
+      return;
+    }
+
+    if (mode === 'SIZE_ONLY') {
+      this.selectedColorIds.set([]);
+      this.variants.set([]);
+      return;
+    }
+
+    this.variants.set([]);
+  }
+
+  get isSimpleMode() {
+    return this.variantMode() === 'SIMPLE';
+  }
+
+  get isSizeOnlyMode() {
+    return this.variantMode() === 'SIZE_ONLY';
   }
 
   toggleColor(colorId: number, checked: boolean) {
@@ -152,17 +236,44 @@ export class ProductModalComponent implements OnInit {
 
   async generateVariants() {
     this.formError.set('');
-    const colors = this.selectedColorIds();
+
+    if (this.isSimpleMode) {
+      this.formError.set('En modo producto unico no necesitas generar variantes.');
+      return;
+    }
+
     const sizes = this.selectedSizeIds();
 
-    if (!colors.length || !sizes.length) {
-      this.formError.set('Selecciona al menos un color y una talla para generar variantes.');
+    if (!sizes.length) {
+      this.formError.set('Selecciona al menos una talla para generar variantes.');
+      return;
+    }
+
+    const existingVariants = new Map(this.variants().map((variant) => ([`${variant.colorId}-${variant.sizeId}`, variant])));
+
+    if (this.isSizeOnlyMode) {
+      const mergedVariants = sizes.map((sizeId) => {
+        const key = `0-${sizeId}`;
+        const existing = existingVariants.get(key);
+        return existing ? existing : {
+          colorId: 0,
+          sizeId,
+          price: 0,
+          imageUrl: undefined,
+        } as ProductVariantForm;
+      });
+
+      this.variants.set(mergedVariants);
+      return;
+    }
+
+    const colors = this.selectedColorIds();
+    if (!colors.length) {
+      this.formError.set('Selecciona al menos un color para generar variantes.');
       return;
     }
 
     const response = await firstValueFrom(this.productService.generateVariants({ colorIds: colors, sizeIds: sizes }));
-    const existingVariants = new Map(this.variants().map((variant) => ([`${variant.colorId}-${variant.sizeId}`, variant])));
-
     const mergedVariants = response.variants.map((variant) => {
       const key = `${variant.colorId}-${variant.sizeId}`;
       const existing = existingVariants.get(key);
@@ -271,10 +382,10 @@ export class ProductModalComponent implements OnInit {
     return fileImages;
   }
 
-  private async buildVariantPayload(currentVariants: ProductVariantForm[]) {
+  private async buildVariantPayload(currentVariants: ProductVariantForm[], mode: ProductVariantMode) {
     const payloadVariants = [] as Array<{
-      colorId: number;
-      sizeId: number;
+      colorId?: number;
+      sizeId?: number;
       price: number;
       imageUrl?: string;
       imageFile?: { filename: string; data: string };
@@ -282,10 +393,15 @@ export class ProductModalComponent implements OnInit {
 
     for (const variant of currentVariants) {
       const variantPayload: any = {
-        colorId: variant.colorId,
-        sizeId: variant.sizeId,
         price: variant.price,
       };
+
+      if (mode === 'MATRIX') {
+        variantPayload.colorId = variant.colorId;
+        variantPayload.sizeId = variant.sizeId;
+      } else if (mode === 'SIZE_ONLY') {
+        variantPayload.sizeId = variant.sizeId;
+      }
 
       if (variant.imageUrl) {
         variantPayload.imageUrl = variant.imageUrl;
@@ -316,10 +432,15 @@ export class ProductModalComponent implements OnInit {
     const description = this.productForm.value.description?.trim();
     const categoryId = Number(this.productForm.value.categoryId);
     const isActive = this.productForm.value.isActive;
+    const mode = this.variantMode();
 
     const currentVariants = this.variants();
     if (!currentVariants.length) {
-      this.formError.set('Genera las variantes antes de crear o actualizar el producto.');
+      this.formError.set(
+        this.isSimpleMode
+          ? 'Configura el precio de la variante unica antes de guardar.'
+          : 'Genera las variantes antes de crear o actualizar el producto.',
+      );
       return;
     }
 
@@ -330,7 +451,7 @@ export class ProductModalComponent implements OnInit {
     }
 
     const imageFiles = await this.buildImageFilesPayload();
-    const payloadVariants = await this.buildVariantPayload(currentVariants);
+    const payloadVariants = await this.buildVariantPayload(currentVariants, mode);
 
     if (this.isEditing) {
       const keptImageUrls = this.productImages()
@@ -345,8 +466,9 @@ export class ProductModalComponent implements OnInit {
           description,
           categoryId,
           isActive,
-          colorIds: this.selectedColorIds(),
-          sizeIds: this.selectedSizeIds(),
+          variantMode: mode,
+          colorIds: mode === 'MATRIX' ? this.selectedColorIds() : [],
+          sizeIds: this.isSimpleMode ? [] : this.selectedSizeIds(),
           imageUrls: keptImageUrls,
           imageFiles: imageFiles.length ? imageFiles : undefined,
           variants: payloadVariants,
@@ -359,8 +481,9 @@ export class ProductModalComponent implements OnInit {
       name,
       description,
       categoryId,
-      colorIds: this.selectedColorIds(),
-      sizeIds: this.selectedSizeIds(),
+      variantMode: mode,
+      colorIds: mode === 'MATRIX' ? this.selectedColorIds() : [],
+      sizeIds: this.isSimpleMode ? [] : this.selectedSizeIds(),
       imageFiles: imageFiles.length ? imageFiles : undefined,
       variants: payloadVariants,
     };
@@ -388,10 +511,16 @@ export class ProductModalComponent implements OnInit {
   }
 
   getColorName(colorId: number): string {
+    if (!colorId || colorId <= 0) {
+      return '-';
+    }
     return this.colors.find((color) => color.id === colorId)?.name ?? 'N/A';
   }
 
   getSizeName(sizeId: number): string {
+    if (!sizeId || sizeId <= 0) {
+      return '-';
+    }
     return this.sizes.find((size) => size.id === sizeId)?.name ?? 'N/A';
   }
 }

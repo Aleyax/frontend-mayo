@@ -1,8 +1,7 @@
 import { Routes } from '@angular/router';
 import { AdminDashboardLayoutComponent } from './layouts/admin-dashboard-layout/admin-dashboard-layout.component';
 import { AuthGuard } from '../auth/auth.guard';
-
-
+import { PermissionGuard } from '../auth/permission.guard';
 
 export const adminDashboardRoute: Routes = [
   {
@@ -11,44 +10,83 @@ export const adminDashboardRoute: Routes = [
     canActivate: [AuthGuard],
     children: [
       {
+        path: 'dashboard',
+        canActivate: [PermissionGuard],
+        data: { permission: 'dashboard.view' },
+        loadComponent: () => import('./pages/dashboard-home-page/dashboard-home-page.component').then(m => m.DashboardHomePageComponent)
+      },
+      {
         path: 'category',
+        canActivate: [PermissionGuard],
+        data: { permission: 'categories.manage' },
         loadComponent: () => import('./pages/category-admin-page/category-admin-page.component').then(m => m.CategoryAdminPageComponent)
       },
       {
         path: 'color',
+        canActivate: [PermissionGuard],
+        data: { permission: 'colors.manage' },
         loadComponent: () => import('./pages/color-admin-page/color-admin-page.component').then(m => m.ColorAdminPageComponent)
       },
       {
         path: 'size',
+        canActivate: [PermissionGuard],
+        data: { permission: 'sizes.manage' },
         loadComponent: () => import('./pages/size-admin-page/size-admin-page.component').then(m => m.SizeAdminPageComponent)
       },
       {
         path: 'product',
+        canActivate: [PermissionGuard],
+        data: { permission: 'products.view' },
         loadComponent: () => import('./pages/product-admin-page/product-admin-page.component').then(m => m.ProductAdminPageComponent)
       },
       {
         path: 'inventory',
+        canActivate: [PermissionGuard],
+        data: { permission: 'inventory.view' },
         loadComponent: () => import('./pages/inventory-admin-page/inventory-admin-page.component').then(m => m.InventoryAdminPageComponent)
       },
       {
         path: 'transfers',
+        canActivate: [PermissionGuard],
+        data: { permission: 'transfers.view' },
         loadComponent: () => import('./pages/transfer-admin-page/transfer-admin-page.component').then(m => m.TransferAdminPageComponent)
       },
       {
         path: 'stores',
+        canActivate: [PermissionGuard],
+        data: { permission: 'stores.view' },
         loadComponent: () => import('./pages/store-admin-page/store-admin-page.component').then(m => m.StoreAdminPageComponent)
       },
       {
         path: 'users',
+        canActivate: [PermissionGuard],
+        data: { permission: 'users.view' },
         loadComponent: () => import('./pages/user-management/user-management').then(m => m.UserManagementComponent)
       },
       {
+        path: 'roles',
+        canActivate: [PermissionGuard],
+        data: { permission: 'roles.view' },
+        loadComponent: () => import('./pages/role-management-page/role-management-page.component').then(m => m.RoleManagementPageComponent)
+      },
+      {
         path: 'orders',
+        canActivate: [PermissionGuard],
+        data: { permission: 'orders.view' },
         loadChildren: () => import('../order/order.routes').then(m => m.orderRoutes)
       },
       {
+        path: 'forbidden',
+        loadComponent: () => import('./pages/forbidden-page/forbidden-page.component').then(m => m.ForbiddenPageComponent)
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
+      {
         path: '**',
-        redirectTo: 'category'
+        redirectTo: 'dashboard'
       }
     ]
   }

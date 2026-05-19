@@ -45,7 +45,6 @@
           <th>Estado</th>
           <th>Origen</th>
           <th>Destino</th>
-          <th>Items</th>
           <th>Creado</th>
           <th>Recibido</th>
           <th>Acciones</th>
@@ -54,7 +53,7 @@
       <tbody>
         @if (filteredTransfers().length === 0) {
           <tr>
-            <td colspan="8" class="py-8 text-center text-sm text-gray-500">
+            <td colspan="7" class="py-8 text-center text-sm text-gray-500">
               No hay transferencias para los filtros seleccionados.
             </td>
           </tr>
@@ -79,10 +78,6 @@
                 <div class="text-xs text-gray-500">{{ transfer.toStore.code || '-' }}</div>
               </td>
               <td>
-                <div class="font-medium">{{ transfer.items.length || 0 }} item(s)</div>
-                <div class="text-xs text-gray-500">{{ getTransferItemsSummary(transfer) }}</div>
-              </td>
-              <td>
                 <div>{{ transfer.createdAt | date: 'short' }}</div>
                 <div class="text-xs text-gray-500">{{ getCreatedByLabel(transfer) }}</div>
               </td>
@@ -96,6 +91,9 @@
               </td>
               <td>
                 <div class="flex flex-wrap gap-2">
+                  <button class="btn btn-outline btn-xs" type="button" (click)="openTransferDetails(transfer)">
+                    Ver
+                  </button>
                   @if (transfer.status !== 'RECEIVED' && transfer.status !== 'CANCELLED') {
                     <button
                       class="btn btn-success btn-xs"
@@ -109,8 +107,6 @@
                         Recibir
                       }
                     </button>
-                  } @else {
-                    <span class="text-xs text-gray-500">Sin acciones</span>
                   }
                 </div>
               </td>
@@ -120,6 +116,79 @@
       </tbody>
     </table>
   </section>
+
+  @if (showTransferDetails() && selectedTransferDetails()) {
+    <div class="fixed inset-0 z-40 bg-black/40" (click)="closeTransferDetails()"></div>
+    <section class="transfer-details-modal fixed inset-x-2 top-4 z-50 mx-auto max-h-[92vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="transfer-details-header">
+        <div>
+          <h2 class="text-lg font-bold">Detalle de transferencia {{ selectedTransferDetails()!.code }}</h2>
+          <p class="text-sm text-gray-500">Movimiento #{{ selectedTransferDetails()!.id }}</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="closeTransferDetails()">Cerrar</button>
+      </div>
+
+      <div class="transfer-details-grid">
+        <div>
+          <p class="transfer-details-label">Estado</p>
+          <span class="badge" [ngClass]="getStatusBadgeClass(selectedTransferDetails()!.status)">
+            {{ getStatusLabel(selectedTransferDetails()!.status) }}
+          </span>
+        </div>
+        <div>
+          <p class="transfer-details-label">Origen</p>
+          <p>{{ selectedTransferDetails()!.fromStore.name }} ({{ selectedTransferDetails()!.fromStore.code }})</p>
+        </div>
+        <div>
+          <p class="transfer-details-label">Destino</p>
+          <p>{{ selectedTransferDetails()!.toStore.name }} ({{ selectedTransferDetails()!.toStore.code }})</p>
+        </div>
+        <div>
+          <p class="transfer-details-label">Creado</p>
+          <p>{{ selectedTransferDetails()!.createdAt | date: 'short' }}</p>
+          <p class="text-xs text-gray-500">{{ getCreatedByLabel(selectedTransferDetails()!) }}</p>
+        </div>
+        <div>
+          <p class="transfer-details-label">Recibido</p>
+          @if (selectedTransferDetails()!.status === 'RECEIVED') {
+            <p>{{ selectedTransferDetails()!.updatedAt | date: 'short' }}</p>
+            <p class="text-xs text-gray-500">{{ getReceivedByLabel(selectedTransferDetails()!) }}</p>
+          } @else {
+            <p class="text-xs text-gray-500">Pendiente</p>
+          }
+        </div>
+      </div>
+
+      <div class="transfer-details-items">
+        <h3 class="font-semibold">Items del movimiento</h3>
+        @if (selectedTransferDetails()!.items.length === 0) {
+          <p class="text-sm text-gray-500">Sin items registrados.</p>
+        } @else {
+          <div class="transfer-item-list">
+            @for (item of selectedTransferDetails()!.items; track item.id) {
+              <article class="transfer-item-card">
+                <div class="transfer-item-text">
+                  <p class="transfer-item-name">{{ item.variant.product.name || 'Variante' }}</p>
+                  <p class="transfer-item-meta">
+                    {{ item.variant.color.name || 'Sin color' }} / {{ item.variant.size.name || 'Sin talla' }}
+                  </p>
+                  <p class="transfer-item-sku">{{ item.variant.sku || ('#' + item.variantId) }}</p>
+                </div>
+                <span class="badge badge-primary badge-outline">x{{ item.quantity }}</span>
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      @if (selectedTransferDetails()!.note) {
+        <div class="transfer-details-note">
+          <p class="transfer-details-label">Nota</p>
+          <p>{{ selectedTransferDetails()!.note }}</p>
+        </div>
+      }
+    </section>
+  }
 
   @if (showCreateDrawer()) {
     <div class="fixed inset-0 z-40 bg-black/40" (click)="closeCreateTransferDrawer()"></div>

@@ -17,7 +17,24 @@ export interface User {
 export interface Role {
   id: number;
   name: string;
+  description?: string | null;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   users: User[];
+}
+
+export interface PermissionCatalogItem {
+  code: string;
+  name: string;
+  module: string;
+  description?: string | null;
+  isActive: boolean;
+}
+
+export interface RolePermissionsResponse {
+  roleId: number;
+  permissions: string[];
 }
 
 @Injectable({
@@ -56,15 +73,31 @@ export class UserService {
     return this.http.get<Role[]>(`${this.apiUrl}/roles`);
   }
 
-  createRole(role: { name: string }): Observable<Role> {
+  createRole(role: { name: string; description?: string; isActive?: boolean }): Observable<Role> {
     return this.http.post<Role>(`${this.apiUrl}/roles`, role);
   }
 
-  updateRole(id: number, role: { name: string }): Observable<Role> {
+  updateRole(id: number, role: { name: string; description?: string; isActive?: boolean }): Observable<Role> {
     return this.http.put<Role>(`${this.apiUrl}/roles/${id}`, role);
+  }
+
+  updateRoleStatus(id: number, isActive: boolean): Observable<Role> {
+    return this.http.patch<Role>(`${this.apiUrl}/roles/${id}/status`, { isActive });
   }
 
   deleteRole(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/roles/${id}`);
+  }
+
+  getPermissionsCatalog(): Observable<PermissionCatalogItem[]> {
+    return this.http.get<PermissionCatalogItem[]>(`${this.apiUrl}/permissions`);
+  }
+
+  getRolePermissions(roleId: number): Observable<RolePermissionsResponse> {
+    return this.http.get<RolePermissionsResponse>(`${this.apiUrl}/roles/${roleId}/permissions`);
+  }
+
+  updateRolePermissions(roleId: number, permissions: string[]): Observable<RolePermissionsResponse> {
+    return this.http.put<RolePermissionsResponse>(`${this.apiUrl}/roles/${roleId}/permissions`, { permissions });
   }
 }

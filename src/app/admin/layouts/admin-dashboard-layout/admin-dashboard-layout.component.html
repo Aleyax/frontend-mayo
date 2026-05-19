@@ -1,8 +1,8 @@
 <div class="drawer lg:drawer-open">
   <input id="my-drawer-4" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content">
-    <nav class="navbar w-full bg-base-300">
-      <div class="flex flex-row items-center">
+    <nav class="navbar w-full bg-base-300 admin-navbar">
+      <div class="admin-navbar-left">
         <label for="my-drawer-4" aria-label="open sidebar" class="btn btn-square btn-ghost">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -21,14 +21,15 @@
             <path d="M14 10l2 2l-2 2"></path>
           </svg>
         </label>
-        <div class="px-4">Panel de Administracion</div>
+        <div class="admin-navbar-title">Panel de Administracion</div>
       </div>
-      <div class="flex-1"></div>
-      <div class="flex items-center gap-4">
-        <span class="text-sm">
-          {{ currentUser?.firstName }} {{ currentUser?.lastName }}
-          <span class="badge badge-primary ml-2">{{ currentUser?.role }}</span>
-        </span>
+      <div class="admin-navbar-right">
+        <div class="admin-navbar-user">
+          <span class="admin-navbar-user-name">
+            {{ currentUser?.firstName }} {{ currentUser?.lastName }}
+          </span>
+          <span class="badge badge-primary">{{ currentUser?.role }}</span>
+        </div>
         <button
           type="button"
           class="theme-toggle"
@@ -40,7 +41,7 @@
             <span class="theme-toggle-thumb">{{ currentTheme === 'dark' ? 'Oscuro' : 'Claro' }}</span>
           </span>
         </button>
-        <button class="btn btn-ghost" (click)="logout()">Cerrar Sesion</button>
+        <button class="btn btn-ghost btn-sm admin-navbar-logout" (click)="logout()">Cerrar Sesion</button>
       </div>
     </nav>
 

@@ -58,41 +58,81 @@
           <textarea formControlName="description" class="textarea textarea-bordered w-full" rows="3" placeholder="Descripción opcional"></textarea>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
-          <div class="card bg-base-200 p-4">
-            <h4 class="font-semibold mb-2">Colores</h4>
-            <div class="grid gap-2">
-              @for (color of colors; track color.id) {
-                <label class="label cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="checkbox mr-2"
-                    [checked]="selectedColorIds().includes(color.id)"
-                    (change)="toggleColor(color.id, $event.target.checked)"
-                  />
-                  <span>{{ color.name }}</span>
-                </label>
-              }
-            </div>
-          </div>
-
-          <div class="card bg-base-200 p-4">
-            <h4 class="font-semibold mb-2">Tallas</h4>
-            <div class="grid gap-2">
-              @for (size of sizes; track size.id) {
-                <label class="label cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="checkbox mr-2"
-                    [checked]="selectedSizeIds().includes(size.id)"
-                    (change)="toggleSize(size.id, $event.target.checked)"
-                  />
-                  <span>{{ size.name }}</span>
-                </label>
-              }
-            </div>
+        <div class="card bg-base-200 p-4">
+          <h4 class="font-semibold mb-2">Tipo de producto</h4>
+          <div class="grid gap-2">
+            <label class="label cursor-pointer justify-start gap-3">
+              <input
+                type="radio"
+                name="variant-mode"
+                class="radio radio-primary"
+                [checked]="variantMode() === 'MATRIX'"
+                (change)="setVariantMode('MATRIX')"
+              />
+              <span>Con variantes (color y talla)</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              <input
+                type="radio"
+                name="variant-mode"
+                class="radio radio-primary"
+                [checked]="variantMode() === 'SIMPLE'"
+                (change)="setVariantMode('SIMPLE')"
+              />
+              <span>Producto unico (sin color/talla)</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              <input
+                type="radio"
+                name="variant-mode"
+                class="radio radio-primary"
+                [checked]="variantMode() === 'SIZE_ONLY'"
+                (change)="setVariantMode('SIZE_ONLY')"
+              />
+              <span>Producto unico con talla (sin color)</span>
+            </label>
           </div>
         </div>
+
+        @if (!isSimpleMode) {
+          <div class="grid gap-4" [ngClass]="{ 'lg:grid-cols-2': !isSizeOnlyMode }">
+            @if (!isSizeOnlyMode) {
+            <div class="card bg-base-200 p-4">
+              <h4 class="font-semibold mb-2">Colores</h4>
+              <div class="grid gap-2">
+                @for (color of colors; track color.id) {
+                  <label class="label cursor-pointer">
+                    <input
+                      type="checkbox"
+                      class="checkbox mr-2"
+                      [checked]="selectedColorIds().includes(color.id)"
+                      (change)="toggleColor(color.id, $event.target.checked)"
+                    />
+                    <span>{{ color.name }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+            }
+
+            <div class="card bg-base-200 p-4">
+              <h4 class="font-semibold mb-2">Tallas</h4>
+              <div class="grid gap-2">
+                @for (size of sizes; track size.id) {
+                  <label class="label cursor-pointer">
+                    <input
+                      type="checkbox"
+                      class="checkbox mr-2"
+                      [checked]="selectedSizeIds().includes(size.id)"
+                      (change)="toggleSize(size.id, $event.target.checked)"
+                    />
+                    <span>{{ size.name }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          </div>
+        }
 
         <div class="form-control w-full">
           <label class="label"><span class="label-text">Imágenes del producto</span></label>
@@ -127,11 +167,15 @@
         </div>
 
         <div class="flex flex-col gap-3">
-          <button class="btn btn-primary w-full max-w-xs" type="button" (click)="generateVariants()">Generar variantes</button>
+          @if (!isSimpleMode) {
+            <button class="btn btn-primary w-full max-w-xs" type="button" (click)="generateVariants()">
+              @if (isSizeOnlyMode) { Generar por talla } @else { Generar variantes }
+            </button>
+          }
 
           @if (variants().length) {
             <div class="overflow-x-auto rounded-box border border-base-200 bg-base-100 p-4">
-              <h4 class="font-semibold mb-3">Variantes</h4>
+              <h4 class="font-semibold mb-3">@if (isSimpleMode) { Variante unica } @else { Variantes }</h4>
               <table class="table w-full table-sm">
                 <thead>
                   <tr>
@@ -144,11 +188,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (variant of variants(); track variant.colorId + '-' + variant.sizeId) {
+                  @for (variant of variants(); track variant.colorId + '-' + variant.sizeId + '-' + $index) {
                     <tr>
                       <td>{{ $index + 1 }}</td>
-                      <td>{{ getColorName(variant.colorId) }}</td>
-                      <td>{{ getSizeName(variant.sizeId) }}</td>
+                      <td>{{ (isSimpleMode || isSizeOnlyMode) ? '-' : getColorName(variant.colorId) }}</td>
+                      <td>{{ isSimpleMode ? '-' : getSizeName(variant.sizeId) }}</td>
                       <td>
                         <input
                           type="number"

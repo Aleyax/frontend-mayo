@@ -93,10 +93,13 @@
     }
   </section>
 
-  <aside class="cart-panel">
+  <aside id="pos-mobile-cart" class="cart-panel" [class.mobile-open]="showMobileCart">
     <header class="cart-header">
       <h2>Carrito</h2>
-      <button type="button" (click)="clearCart()" [disabled]="cart.length === 0">Vaciar</button>
+      <div class="cart-header-actions">
+        <button type="button" class="btn-close-mobile-cart" (click)="closeMobileCart()">Cerrar</button>
+        <button type="button" (click)="clearCart()" [disabled]="cart.length === 0">Vaciar</button>
+      </div>
     </header>
 
     @if (remoteFulfillmentStoreId) {
@@ -177,6 +180,24 @@
     </footer>
   </aside>
 </div>
+
+@if (showMobileCart) {
+  <div class="mobile-cart-backdrop" (click)="closeMobileCart()"></div>
+}
+
+<button
+  type="button"
+  class="mobile-cart-trigger"
+  (click)="toggleMobileCart()"
+  [attr.aria-expanded]="showMobileCart"
+  aria-controls="pos-mobile-cart"
+>
+  <span class="mobile-cart-trigger-meta">
+    <strong>{{ cartItemsCount }} item(s)</strong>
+    <small>Total S/ {{ total | number: "1.2-2" }}</small>
+  </span>
+  <span class="mobile-cart-trigger-action">{{ showMobileCart ? 'Cerrar' : 'Ver carrito' }}</span>
+</button>
 
 @if (toast; as currentToast) {
   <div class="pos-toast" [class.toast-success]="currentToast.type === 'success'" [class.toast-error]="currentToast.type === 'error'" [class.toast-info]="currentToast.type === 'info'">

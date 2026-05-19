@@ -57,3 +57,28 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Authorization Frontend (Roles & Permissions)
+
+The project now includes a first permission layer in frontend:
+
+- `src/app/auth/permission-catalog.ts`: base role-permission matrix.
+- `src/app/auth/permission.service.ts`: reusable permission checks (`can`, `canAny`, `canAll`).
+- `src/app/auth/permission.guard.ts`: route-level guard using `data.permission`.
+- `src/app/admin/pages/forbidden-page/*`: `403` page for unauthorized access.
+- `src/app/admin/pages/role-management-page/*`: initial UI for role management.
+
+Main protected routes are defined in:
+
+- `src/app/admin/admin-dashboard.routes.ts`
+- `src/app/order/order.routes.ts`
+
+Example route metadata:
+
+```ts
+{
+  path: 'roles',
+  canActivate: [PermissionGuard],
+  data: { permission: 'roles.view' }
+}
+```
