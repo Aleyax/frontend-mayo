@@ -34,6 +34,12 @@ export const adminDashboardRoute: Routes = [
         loadComponent: () => import('./pages/size-admin-page/size-admin-page.component').then(m => m.SizeAdminPageComponent)
       },
       {
+        path: 'payment-methods',
+        canActivate: [PermissionGuard],
+        data: { permission: 'payment_methods.manage' },
+        loadComponent: () => import('./pages/payment-method-admin-page/payment-method-admin-page.component').then(m => m.PaymentMethodAdminPageComponent)
+      },
+      {
         path: 'product',
         canActivate: [PermissionGuard],
         data: { permission: 'products.view' },

@@ -1,0 +1,108 @@
+<div class="flex flex-col justify-center gap-5">
+  <div>
+    <p class="text-sm text-gray-500 mb-1">Admin Dashboard</p>
+    <h1 class="text-2xl font-bold mb-4">Gestion de Metodos de Pago</h1>
+  </div>
+
+  <div>
+    <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+      <legend class="fieldset-legend">Filtros</legend>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="join w-full lg:w-auto">
+          <input
+            type="text"
+            class="input join-item w-full"
+            placeholder="Buscar por nombre o codigo"
+            (keyup)="onSearch(searchInput.value)"
+            #searchInput
+          />
+          <button class="btn join-item btn-primary" (click)="onSearch(searchInput.value)">Buscar</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="cursor-pointer label">
+            <span class="label-text">Activos</span>
+            <input
+              type="checkbox"
+              class="checkbox ml-2"
+              [checked]="activeChecked()"
+              (change)="setActiveChecked($event.target.checked)"
+            />
+          </label>
+          <label class="cursor-pointer label">
+            <span class="label-text">Inactivos</span>
+            <input
+              type="checkbox"
+              class="checkbox ml-2"
+              [checked]="inactiveChecked()"
+              (change)="setInactiveChecked($event.target.checked)"
+            />
+          </label>
+        </div>
+
+        <div class="w-full sm:w-auto">
+          <button class="btn btn-primary w-full sm:w-auto" (click)="openModal()">Agregar</button>
+        </div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Codigo</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of paymentMethods(); track item.id) {
+          <tr>
+            <th>{{ $index + 1 }}</th>
+            <td>{{ item.name }}</td>
+            <td>{{ item.code }}</td>
+            <td>
+              @if (item.isActive) {
+                <span class="badge badge-success">Activo</span>
+              } @else {
+                <span class="badge badge-neutral">Inactivo</span>
+              }
+            </td>
+            <td>
+              <div class="flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-outline btn-info" (click)="openModalForEdit(item)">
+                  Editar
+                </button>
+                @if (item.isActive) {
+                  <button class="btn btn-sm btn-outline btn-error" (click)="deactivate(item)">
+                    Desactivar
+                  </button>
+                } @else {
+                  <button class="btn btn-sm btn-outline btn-success" (click)="activate(item)">
+                    Activar
+                  </button>
+                }
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-generic-modal
+    [createTitle]="'Crear metodo de pago'"
+    [createDescription]="'Agrega un nuevo metodo para POS y ventas'"
+    [editTitle]="'Editar metodo de pago'"
+    [editDescription]="'Actualiza el nombre del metodo de pago'"
+    [fieldLabel]="'Nombre del metodo'"
+    [fieldPlaceholder]="'Ejemplo: Link de pago'"
+    (itemSaved)="onSaved($event)"
+  ></app-generic-modal>
+
+  <app-confirm-modal></app-confirm-modal>
+  <app-alert></app-alert>
+</div>

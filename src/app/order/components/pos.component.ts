@@ -7,6 +7,7 @@ import { ProductService } from '../../product/services/product.service';
 import { StoreService } from '../../store/services/store.service';
 import { OrderService } from '../services/order.service';
 import { AuthService } from '../../auth/auth.service';
+import { PaymentMethodService } from '../../payment-method/services/payment-method.service';
 
 interface PosVariant {
   id: number;
@@ -66,6 +67,7 @@ type ToastType = 'success' | 'error' | 'info';
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule]
 })
 export class PosComponent implements OnInit {
+  private readonly defaultPaymentMethods = ['Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Nequi'];
   cart: CartItem[] = [];
   products: PosProduct[] = [];
   filteredProducts: PosProduct[] = [];
@@ -96,7 +98,7 @@ export class PosComponent implements OnInit {
   selectedRemoteStoreId: number | null = null;
   remoteFulfillmentStoreId: number | null = null;
 
-  paymentMethods = ['Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia', 'Nequi'];
+  paymentMethods = [...this.defaultPaymentMethods];
   selectedPaymentMethod = 'Efectivo';
   paymentForm!: FormGroup;
   orderForm!: FormGroup;
@@ -124,11 +126,13 @@ export class PosComponent implements OnInit {
     private storeService: StoreService,
     private orderService: OrderService,
     private authService: AuthService,
+    private paymentMethodService: PaymentMethodService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.initializeForms();
+    this.loadPaymentMethods();
     this.loadProducts();
     this.loadStores();
     this.loadSalesHistory();
@@ -415,8 +419,8 @@ export class PosComponent implements OnInit {
       return;
     }
 
-    this.selectedPaymentMethod = 'Efectivo';
-    this.paymentForm.patchValue({ method: 'Efectivo', amountPaid: this.total });
+    this.selectedPaymentMethod = this.paymentMethods[0] || this.defaultPaymentMethods[0];
+    this.paymentForm.patchValue({ method: this.selectedPaymentMethod, amountPaid: this.total });
     this.calculateChange();
     this.closeMobileCart();
     this.showPaymentDrawer = true;
@@ -987,6 +991,33 @@ export class PosComponent implements OnInit {
   private parsePaymentMethod(note?: string | null): string {
     const match = note?.match(/Metodo de pago:\s*([^|]+)/i);
     return match?.[1]?.trim() || 'No especificado';
+  }
+
+  private loadPaymentMethods() {
+    this.paymentMethodService.listActive().subscribe({
+      next: (methods) => {
+        const names = methods
+          .map((item) => String(item.name || '').trim())
+          .filter((name) => name.length > 0);
+
+        this.paymentMethods = names.length > 0 ? names : [...this.defaultPaymentMethods];
+
+        if (!this.paymentMethods.includes(this.selectedPaymentMethod)) {
+          this.selectedPaymentMethod = this.paymentMethods[0] || this.defaultPaymentMethods[0];
+        }
+
+        this.paymentForm.patchValue({ method: this.selectedPaymentMethod }, { emitEvent: false });
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.paymentMethods = [...this.defaultPaymentMethods];
+        if (!this.paymentMethods.includes(this.selectedPaymentMethod)) {
+          this.selectedPaymentMethod = this.paymentMethods[0];
+          this.paymentForm.patchValue({ method: this.selectedPaymentMethod }, { emitEvent: false });
+        }
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   private showToast(message: string, type: ToastType) {
