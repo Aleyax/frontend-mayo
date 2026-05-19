@@ -1,3 +1,175 @@
-<p>
-  home works!
-</p>
+<section class="marketplace-page">
+  <header class="marketplace-hero">
+    <div>
+      <p class="hero-kicker">Marketplace mayorista</p>
+      <h1>Compra por variantes como en Alibaba</h1>
+      <p class="hero-subtitle">
+        Selecciona color, talla y cantidades grandes. Tu pedido puede registrarse
+        incluso cuando parte del stock este sujeto a confirmacion.
+      </p>
+    </div>
+    <a class="cart-shortcut desktop-only" routerLink="/marketplace/cart">
+      Pedido ({{ cartUnits }})
+    </a>
+  </header>
+
+  <button type="button" class="mobile-filters-trigger" (click)="toggleMobileFilters()">
+    {{ showMobileFilters ? 'Cerrar filtros' : 'Filtrar productos' }}
+  </button>
+
+  <div class="marketplace-layout">
+    <aside class="filters-panel" [class.mobile-open]="showMobileFilters">
+      <div class="filters-header">
+        <h2>Filtros</h2>
+        <button type="button" class="link-btn" (click)="clearFilters()">Limpiar</button>
+      </div>
+
+      <label class="filter-block">
+        <span>Buscar</span>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Nombre o descripcion"
+          (keyup.enter)="applyFilters()"
+        />
+      </label>
+
+      <div class="filter-block">
+        <span>Categoria</span>
+        <div class="option-list">
+          <button
+            type="button"
+            class="option-chip"
+            [class.active]="selectedCategoryId === null"
+            (click)="selectedCategoryId = null"
+          >
+            Todas
+          </button>
+          @for (category of categories(); track category.id) {
+            <button
+              type="button"
+              class="option-chip"
+              [class.active]="selectedCategoryId === category.id"
+              (click)="selectedCategoryId = category.id"
+            >
+              {{ category.name }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-block">
+        <span>Color</span>
+        <div class="option-list">
+          <button
+            type="button"
+            class="option-chip"
+            [class.active]="selectedColorId === null"
+            (click)="selectedColorId = null"
+          >
+            Todos
+          </button>
+          @for (color of colors(); track color.id) {
+            <button
+              type="button"
+              class="option-chip option-chip-color"
+              [class.active]="selectedColorId === color.id"
+              (click)="selectedColorId = color.id"
+            >
+              <i [style.background]="color.hex || '#cbd5e1'"></i>
+              {{ color.name }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-block">
+        <span>Talla</span>
+        <div class="option-list">
+          <button
+            type="button"
+            class="option-chip"
+            [class.active]="selectedSizeId === null"
+            (click)="selectedSizeId = null"
+          >
+            Todas
+          </button>
+          @for (size of sizes(); track size.id) {
+            <button
+              type="button"
+              class="option-chip"
+              [class.active]="selectedSizeId === size.id"
+              (click)="selectedSizeId = size.id"
+            >
+              {{ size.name }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-block">
+        <span>Disponibilidad</span>
+        <div class="availability-group">
+          <button type="button" [class.active]="availabilityFilter === 'ALL'" (click)="availabilityFilter = 'ALL'">Todos</button>
+          <button type="button" [class.active]="availabilityFilter === 'IN_STOCK'" (click)="availabilityFilter = 'IN_STOCK'">Con stock</button>
+          <button type="button" [class.active]="availabilityFilter === 'UNDER_ORDER'" (click)="availabilityFilter = 'UNDER_ORDER'">Bajo pedido</button>
+        </div>
+      </div>
+
+      <button type="button" class="apply-btn" (click)="applyFilters()">Aplicar filtros</button>
+    </aside>
+
+    <div class="catalog-area">
+      <div class="catalog-head">
+        <p>{{ totalProducts() }} resultado(s)</p>
+        <a class="cart-shortcut" routerLink="/marketplace/cart">Ver pedido ({{ cartUnits }})</a>
+      </div>
+
+      @if (loading()) {
+        <div class="catalog-state">Cargando productos...</div>
+      } @else if (errorMessage()) {
+        <div class="catalog-state error">{{ errorMessage() }}</div>
+      } @else if (products().length === 0) {
+        <div class="catalog-state">No encontramos productos con esos filtros.</div>
+      } @else {
+        <div class="products-grid">
+          @for (product of products(); track product.id) {
+            <article class="product-card">
+              <div class="product-image">
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" [alt]="product.name" />
+                } @else {
+                  <span>Sin imagen</span>
+                }
+              </div>
+              <div class="product-content">
+                <p class="product-category">{{ product.category?.name || 'Sin categoria' }}</p>
+                <h3>{{ product.name }}</h3>
+                <p class="product-price">
+                  @if (product.minPrice !== product.maxPrice) {
+                    S/ {{ product.minPrice | number: '1.2-2' }} - S/ {{ product.maxPrice | number: '1.2-2' }}
+                  } @else {
+                    S/ {{ product.minPrice | number: '1.2-2' }}
+                  }
+                </p>
+                <p class="product-stock" [class.warning]="!product.hasStock">
+                  @if (product.hasStock) {
+                    Stock disponible: {{ product.totalAvailableStock }}
+                  } @else {
+                    Pedido sujeto a disponibilidad
+                  }
+                </p>
+                <div class="meta-row">
+                  <span>{{ product.colors.length }} color(es)</span>
+                  <span>{{ product.sizes.length }} talla(s)</span>
+                  <span>{{ product.variants.length }} variante(s)</span>
+                </div>
+                <a class="view-btn" [routerLink]="['/marketplace/products', product.id]">Ver producto</a>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>

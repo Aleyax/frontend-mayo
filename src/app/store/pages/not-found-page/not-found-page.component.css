@@ -1,0 +1,37 @@
+.mk-not-found {
+  min-height: calc(100vh - 3rem);
+  background: #f4f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mk-not-found article {
+  border: 1px solid #d6e0ec;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.mk-not-found h1 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.mk-not-found p {
+  margin: 0.5rem 0 0;
+  color: #64748b;
+}
+
+.mk-not-found a {
+  margin-top: 0.8rem;
+  display: inline-flex;
+  border: 1px solid #d6e0ec;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  text-decoration: none;
+  color: #0b63ce;
+  font-weight: 700;
+}

@@ -1,0 +1,49 @@
+<section class="mk-track-page">
+  <article class="track-card">
+    <a class="back-link" routerLink="/marketplace">← Volver al marketplace</a>
+    <h1>Seguimiento de pedido</h1>
+    <p>Consulta el estado de tu pedido con codigo y telefono.</p>
+
+    <div class="track-form">
+      <label>
+        Codigo de pedido
+        <input type="text" [(ngModel)]="code" placeholder="MK-XXXXXXXX" />
+      </label>
+      <label>
+        Telefono
+        <input type="text" [(ngModel)]="phone" placeholder="999999999" />
+      </label>
+      <button type="button" (click)="track()" [disabled]="loading">
+        {{ loading ? 'Buscando...' : 'Consultar pedido' }}
+      </button>
+    </div>
+
+    @if (errorMessage) {
+      <p class="error-msg">{{ errorMessage }}</p>
+    }
+
+    @if (result; as order) {
+      <div class="result-card">
+        <h2>{{ order.code }}</h2>
+        <p class="status">{{ order.publicStatus }}</p>
+        <p class="message">{{ order.reviewMessage }}</p>
+
+        <div class="items-list">
+          @for (item of order.items; track item.productName + item.colorName + item.sizeName) {
+            <div class="item-row">
+              <div>
+                <strong>{{ item.productName }}</strong>
+                <p>{{ item.colorName }} / {{ item.sizeName }}</p>
+              </div>
+              <div class="qty">
+                <span>Solicitado: {{ item.requestedQuantity }}</span>
+                <span>Reservado: {{ item.reservedQuantity }}</span>
+                <span [class.pending]="item.pendingQuantity > 0">Pendiente: {{ item.pendingQuantity }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </article>
+</section>

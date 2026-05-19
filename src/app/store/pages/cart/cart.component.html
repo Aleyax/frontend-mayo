@@ -1,0 +1,88 @@
+<section class="mk-cart-page">
+  <header class="cart-head">
+    <div>
+      <a class="back-link" routerLink="/marketplace">← Seguir comprando</a>
+      <h1>Carrito mayorista</h1>
+      <p>Revisa tus variantes y cantidades solicitadas antes del checkout.</p>
+    </div>
+    <button type="button" class="clear-btn" (click)="clearAll()" [disabled]="cartService.items().length === 0">
+      Vaciar carrito
+    </button>
+  </header>
+
+  @if (cartService.items().length === 0) {
+    <div class="empty-state">
+      Tu carrito esta vacio. Agrega productos desde el marketplace.
+    </div>
+  } @else {
+    <div class="cart-layout">
+      <div class="cart-groups">
+        @for (group of groupedProducts(); track group.productId) {
+          <article class="product-group">
+            <header>
+              <h2>{{ group.productName }}</h2>
+            </header>
+
+            <div class="items-list">
+              @for (item of group.items; track item.variantId) {
+                <div class="item-row">
+                  <div class="variant-meta">
+                    <strong>{{ item.colorName }} / {{ item.sizeName }}</strong>
+                    <p>SKU: {{ item.sku }}</p>
+                    <p>Precio: S/ {{ item.unitPrice | number: '1.2-2' }}</p>
+                    <p class="pending" [class.has-pending]="item.quantity > item.availableStock">
+                      @if (item.quantity > item.availableStock) {
+                        {{ item.quantity - item.availableStock }} unidad(es) bajo confirmacion
+                      } @else {
+                        Disponible para reserva inmediata
+                      }
+                    </p>
+                  </div>
+
+                  <div class="item-actions">
+                    <input
+                      type="number"
+                      min="0"
+                      [value]="item.quantity"
+                      (input)="updateQty(item.variantId, +$any($event.target).value)"
+                    />
+                    <p class="line-total">
+                      S/ {{ item.quantity * item.unitPrice | number: '1.2-2' }}
+                    </p>
+                    <button type="button" (click)="removeVariant(item.variantId)">Quitar</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+
+      <aside class="summary-panel">
+        <h3>Resumen</h3>
+        <div class="summary-line">
+          <span>Unidades</span>
+          <strong>{{ cartService.totalUnits() }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>Subtotal</span>
+          <strong>S/ {{ subtotal() | number: '1.2-2' }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>IGV (18%)</span>
+          <strong>S/ {{ tax() | number: '1.2-2' }}</strong>
+        </div>
+        <div class="summary-line total">
+          <span>Total</span>
+          <strong>S/ {{ total() | number: '1.2-2' }}</strong>
+        </div>
+        <p class="pending-banner" [class.show]="cartService.pendingUnits() > 0">
+          {{ cartService.pendingUnits() }} unidad(es) quedaran sujetas a confirmacion de stock.
+        </p>
+        <button type="button" class="checkout-btn" (click)="goCheckout()">
+          Continuar a checkout
+        </button>
+      </aside>
+    </div>
+  }
+</section>

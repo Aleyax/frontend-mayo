@@ -1,0 +1,250 @@
+:host {
+  --mkc-border: color-mix(in oklab, var(--color-base-content, #0f172a) 14%, transparent);
+  --mkc-border-strong: color-mix(in oklab, var(--color-base-content, #0f172a) 24%, transparent);
+  --mkc-surface: var(--color-base-100, #ffffff);
+  --mkc-surface-soft: color-mix(in oklab, var(--mkc-surface) 84%, var(--mkc-text) 16%);
+  --mkc-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
+  --mkc-text: var(--color-base-content, #0f172a);
+  --mkc-primary: #ff6a00;
+  --mkc-accent: var(--color-info, #0b63ce);
+}
+
+.mk-cart-page {
+  min-height: calc(100vh - 3rem);
+  background: var(--color-base-200, #f5f8fc);
+  padding: 1rem;
+}
+
+.cart-head {
+  border: 1px solid var(--mkc-border);
+  border-radius: 12px;
+  background: var(--mkc-surface);
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.back-link {
+  color: var(--mkc-accent);
+  text-decoration: none;
+}
+
+.cart-head h1 {
+  margin: 0.3rem 0;
+  color: var(--mkc-text);
+}
+
+.cart-head p {
+  margin: 0;
+  color: var(--mkc-muted);
+}
+
+.clear-btn {
+  border: 1px solid color-mix(in oklab, #be123c 36%, var(--mkc-border));
+  border-radius: 8px;
+  background: color-mix(in oklab, #be123c 10%, var(--mkc-surface));
+  color: #be123c;
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-state {
+  margin-top: 1rem;
+  border: 1px dashed var(--mkc-border);
+  border-radius: 12px;
+  background: var(--mkc-surface);
+  text-align: center;
+  color: var(--mkc-muted);
+  padding: 2rem 1rem;
+}
+
+.cart-layout {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+}
+
+.cart-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.product-group {
+  border: 1px solid var(--mkc-border);
+  border-radius: 12px;
+  background: var(--mkc-surface);
+  padding: 0.8rem;
+}
+
+.product-group h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--mkc-text);
+}
+
+.items-list {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.item-row {
+  border: 1px solid var(--mkc-border);
+  border-radius: 10px;
+  background: var(--mkc-surface-soft);
+  padding: 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.variant-meta strong {
+  color: var(--mkc-text);
+}
+
+.variant-meta p {
+  margin: 0.18rem 0 0;
+  color: var(--mkc-muted);
+  font-size: 0.78rem;
+}
+
+.variant-meta .pending.has-pending {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.item-actions input {
+  width: 84px;
+  border: 1px solid var(--mkc-border);
+  border-radius: 8px;
+  background: var(--mkc-surface);
+  color: var(--mkc-text);
+  caret-color: var(--mkc-accent);
+  padding: 0.36rem;
+  text-align: center;
+}
+
+.item-actions input::placeholder {
+  color: color-mix(in oklab, var(--mkc-text) 42%, transparent);
+}
+
+.item-actions input:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--mkc-accent) 60%, var(--mkc-border));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--mkc-accent) 22%, transparent);
+}
+
+.item-actions .line-total {
+  margin: 0;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.item-actions button {
+  border: 1px solid color-mix(in oklab, #be123c 36%, var(--mkc-border));
+  border-radius: 7px;
+  background: color-mix(in oklab, #be123c 10%, var(--mkc-surface));
+  color: #be123c;
+  padding: 0.32rem 0.48rem;
+  cursor: pointer;
+}
+
+.summary-panel {
+  border: 1px solid var(--mkc-border);
+  border-radius: 12px;
+  background: var(--mkc-surface);
+  padding: 0.9rem;
+  height: fit-content;
+  position: sticky;
+  top: 1rem;
+}
+
+.summary-panel h3 {
+  margin: 0 0 0.7rem;
+  color: var(--mkc-text);
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.48rem;
+  color: var(--mkc-text);
+}
+
+.summary-line.total {
+  border-top: 1px solid var(--mkc-border);
+  padding-top: 0.58rem;
+  margin-top: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.pending-banner {
+  display: none;
+  margin: 0.75rem 0 0;
+  border: 1px solid color-mix(in oklab, #ff6a00 30%, var(--mkc-border));
+  border-radius: 8px;
+  background: color-mix(in oklab, #ff6a00 10%, var(--mkc-surface));
+  color: #92400e;
+  padding: 0.55rem;
+  font-size: 0.8rem;
+}
+
+.pending-banner.show {
+  display: block;
+}
+
+.checkout-btn {
+  width: 100%;
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mkc-primary);
+  color: #ffffff;
+  padding: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 920px) {
+  .cart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .mk-cart-page {
+    padding: 0.75rem;
+  }
+
+  .cart-head {
+    flex-direction: column;
+  }
+
+  .item-row {
+    flex-direction: column;
+  }
+
+  .item-actions {
+    align-items: stretch;
+  }
+
+  .item-actions input {
+    width: 100%;
+  }
+}

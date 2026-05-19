@@ -1,0 +1,118 @@
+<section class="mk-checkout-page">
+  <header class="checkout-head">
+    <div>
+      <a class="back-link" routerLink="/marketplace/cart">← Volver al carrito</a>
+      <h1>Checkout mayorista</h1>
+      <p>Tu pedido sera revisado por nuestro equipo. Algunos items pueden quedar sujetos a disponibilidad.</p>
+    </div>
+  </header>
+
+  @if (cartService.items().length === 0) {
+    <div class="empty-state">
+      No hay items para procesar. Agrega productos antes de continuar.
+    </div>
+  } @else {
+    <div class="checkout-layout">
+      <form class="checkout-form" (submit)="$event.preventDefault(); submitOrder()">
+        <section>
+          <h2>Datos del cliente</h2>
+          <label>
+            Nombres y apellidos *
+            <input type="text" [(ngModel)]="clientName" name="clientName" />
+          </label>
+          <label>
+            Telefono *
+            <input type="text" [(ngModel)]="clientPhone" name="clientPhone" />
+          </label>
+          <label>
+            Email
+            <input type="email" [(ngModel)]="clientEmail" name="clientEmail" />
+          </label>
+          <label>
+            Empresa
+            <input type="text" [(ngModel)]="companyName" name="companyName" />
+          </label>
+          <label>
+            RUC
+            <input type="text" [(ngModel)]="ruc" name="ruc" />
+          </label>
+        </section>
+
+        <section>
+          <h2>Entrega</h2>
+          <div class="delivery-switch">
+            <button type="button" [class.active]="deliveryType === 'PICKUP'" (click)="deliveryType = 'PICKUP'">Recojo</button>
+            <button type="button" [class.active]="deliveryType === 'DELIVERY'" (click)="deliveryType = 'DELIVERY'">Delivery</button>
+          </div>
+
+          @if (loadingStores) {
+            <p class="small-muted">Cargando tiendas...</p>
+          } @else {
+            <label>
+              Tienda origen *
+              <select [(ngModel)]="sourceStoreId" name="sourceStoreId">
+                @for (store of stores; track store.id) {
+                  <option [ngValue]="store.id">{{ store.name }} ({{ store.code }})</option>
+                }
+              </select>
+            </label>
+          }
+
+          @if (deliveryType === 'PICKUP') {
+            <label>
+              Tienda de recojo *
+              <select [(ngModel)]="pickupStoreId" name="pickupStoreId">
+                @for (store of stores; track store.id) {
+                  <option [ngValue]="store.id">{{ store.name }} ({{ store.code }})</option>
+                }
+              </select>
+            </label>
+          } @else {
+            <label>
+              Direccion de entrega *
+              <input type="text" [(ngModel)]="deliveryAddress" name="deliveryAddress" />
+            </label>
+            <label>
+              Referencia
+              <input type="text" [(ngModel)]="deliveryReference" name="deliveryReference" />
+            </label>
+          }
+        </section>
+
+        <section>
+          <h2>Observaciones</h2>
+          <label>
+            Nota del pedido
+            <textarea rows="3" [(ngModel)]="note" name="note"></textarea>
+          </label>
+        </section>
+
+        @if (errorMessage) {
+          <p class="error-msg">{{ errorMessage }}</p>
+        }
+
+        <button type="submit" class="confirm-btn" [disabled]="submitting">
+          {{ submitting ? 'Registrando...' : 'Confirmar pedido' }}
+        </button>
+      </form>
+
+      <aside class="summary-panel">
+        <h3>Resumen de pedido</h3>
+        <div class="summary-list">
+          @for (item of cartService.items(); track item.variantId) {
+            <div class="summary-item">
+              <strong>{{ item.productName }}</strong>
+              <p>{{ item.colorName }} / {{ item.sizeName }}</p>
+              <p>{{ item.quantity }} x S/ {{ item.unitPrice | number: '1.2-2' }}</p>
+            </div>
+          }
+        </div>
+        <div class="summary-total">
+          <div><span>Subtotal</span><strong>S/ {{ subtotal() | number: '1.2-2' }}</strong></div>
+          <div><span>IGV</span><strong>S/ {{ tax() | number: '1.2-2' }}</strong></div>
+          <div class="total"><span>Total</span><strong>S/ {{ total() | number: '1.2-2' }}</strong></div>
+        </div>
+      </aside>
+    </div>
+  }
+</section>

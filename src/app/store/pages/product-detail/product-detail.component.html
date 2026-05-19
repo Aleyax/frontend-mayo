@@ -1,0 +1,147 @@
+<section class="mk-detail-page">
+  @if (loading()) {
+    <div class="mk-state">Cargando producto...</div>
+  } @else if (errorMessage()) {
+    <div class="mk-state error">{{ errorMessage() }}</div>
+  } @else if (product(); as current) {
+    <header class="mk-detail-head">
+      <div>
+        <a class="back-link" routerLink="/marketplace">← Volver al catalogo</a>
+        <h1>{{ current.name }}</h1>
+        <p class="meta-line">
+          {{ current.category?.name || 'Sin categoria' }} ·
+          @if (current.minPrice !== current.maxPrice) {
+            S/ {{ current.minPrice | number: '1.2-2' }} - S/ {{ current.maxPrice | number: '1.2-2' }}
+          } @else {
+            S/ {{ current.minPrice | number: '1.2-2' }}
+          }
+        </p>
+        <p class="availability" [class.warning]="!current.hasStock">
+          @if (current.hasStock) {
+            Stock total disponible: {{ current.totalAvailableStock }}
+          } @else {
+            Puedes pedir mas unidades bajo confirmacion.
+          }
+        </p>
+      </div>
+      <a class="cart-chip" routerLink="/marketplace/cart">Pedido ({{ cartUnits }})</a>
+    </header>
+
+    <div class="mk-detail-layout">
+      <aside class="gallery-panel">
+        <div class="main-image">
+          @if (selectedImageUrl()) {
+            <img [src]="selectedImageUrl()" [alt]="current.name" />
+          } @else {
+            <span>Sin imagen</span>
+          }
+        </div>
+
+        @if (current.images.length > 0) {
+          <div class="thumb-list">
+            @for (image of current.images; track image.id) {
+              <button
+                type="button"
+                class="thumb-btn"
+                [class.active]="selectedImageUrl() === image.url"
+                (click)="selectImage(image.url)"
+              >
+                <img [src]="image.url" [alt]="current.name" />
+              </button>
+            }
+          </div>
+        }
+      </aside>
+
+      <section class="selection-panel">
+        <h2>Seleccion de variantes</h2>
+        <p class="helper-text">
+          Ingresa cantidades por combinacion. Si superas stock disponible, quedara como pendiente de confirmacion.
+        </p>
+
+        <div class="desktop-matrix">
+          <table>
+            <thead>
+              <tr>
+                <th>Color</th>
+                @for (size of sizeColumns; track size) {
+                  <th>{{ size }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (colorName of colorRows; track colorName) {
+                <tr>
+                  <td class="matrix-color">{{ colorName }}</td>
+                  @for (sizeName of sizeColumns; track sizeName) {
+                    <td>
+                      @if (getVariantByMatrix(colorName, sizeName); as variant) {
+                        <div class="matrix-cell">
+                          <input
+                            type="number"
+                            min="0"
+                            [value]="getVariantQty(variant.id)"
+                            (input)="setVariantQty(variant.id, +$any($event.target).value)"
+                          />
+                          <small>Disp: {{ variant.availableStock }}</small>
+                        </div>
+                      } @else {
+                        <span class="matrix-na">—</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-cards">
+          @for (group of colorGroups; track group.colorName) {
+            <article class="color-card">
+              <header>
+                <h3>
+                  <i [style.background]="group.colorHex || '#94a3b8'"></i>
+                  {{ group.colorName }}
+                </h3>
+              </header>
+              <div class="variant-list">
+                @for (variant of group.variants; track variant.id) {
+                  <div class="variant-row">
+                    <div>
+                      <strong>{{ variant.size?.name || 'Unica' }}</strong>
+                      <p>
+                        S/ {{ variant.price | number: '1.2-2' }} · Disp: {{ variant.availableStock }}
+                      </p>
+                    </div>
+                    <div class="qty-stepper">
+                      <button type="button" (click)="decrementVariant(variant.id)">-</button>
+                      <input
+                        type="number"
+                        min="0"
+                        [value]="getVariantQty(variant.id)"
+                        (input)="setVariantQty(variant.id, +$any($event.target).value)"
+                      />
+                      <button type="button" (click)="incrementVariant(variant.id)">+</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+
+        <footer class="summary-footer">
+          <div>
+            <p>Unidades seleccionadas: <strong>{{ totalSelectedUnits() }}</strong></p>
+            <p>Subtotal estimado: <strong>S/ {{ estimatedSubtotal() | number: '1.2-2' }}</strong></p>
+            @if (footerMessage()) {
+              <p class="summary-error">{{ footerMessage() }}</p>
+            }
+          </div>
+          <button type="button" (click)="addSelectionToCart()">Agregar al pedido</button>
+        </footer>
+      </section>
+    </div>
+  }
+</section>

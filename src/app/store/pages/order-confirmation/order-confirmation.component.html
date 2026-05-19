@@ -1,0 +1,41 @@
+<section class="mk-confirm-page">
+  @if (loading()) {
+    <div class="state">Cargando confirmacion...</div>
+  } @else if (errorMessage()) {
+    <div class="state error">{{ errorMessage() }}</div>
+  } @else if (order(); as current) {
+    <article class="confirm-card">
+      <p class="kicker">Pedido recibido</p>
+      <h1>{{ current.code }}</h1>
+      <p class="status">{{ current.publicStatus }}</p>
+      <p class="message">{{ current.reviewMessage }}</p>
+
+      <div class="totals">
+        <div><span>Subtotal</span><strong>S/ {{ current.totals.subtotal | number: '1.2-2' }}</strong></div>
+        <div><span>IGV</span><strong>S/ {{ current.totals.tax | number: '1.2-2' }}</strong></div>
+        <div class="total"><span>Total</span><strong>S/ {{ current.totals.total | number: '1.2-2' }}</strong></div>
+      </div>
+
+      <div class="items">
+        @for (item of current.items; track item.variantId) {
+          <div class="item-row">
+            <div>
+              <strong>{{ item.productName }}</strong>
+              <p>{{ item.colorName }} / {{ item.sizeName }}</p>
+            </div>
+            <div class="qty">
+              <span>Solicitado: {{ item.requestedQuantity }}</span>
+              <span>Reservado: {{ item.reservedQuantity }}</span>
+              <span [class.pending]="item.pendingQuantity > 0">Pendiente: {{ item.pendingQuantity }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="actions">
+        <a routerLink="/marketplace">Volver al catalogo</a>
+        <a [routerLink]="['/marketplace/track-order']">Seguir pedido</a>
+      </div>
+    </article>
+  }
+</section>
