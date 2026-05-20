@@ -71,6 +71,7 @@ export class PickingBoardComponent implements OnInit {
     PREPARING: '#e67e22',
     READY: '#27ae60',
     DELIVERED: '#16a085',
+    RETURN_PENDING: '#d35400',
     CANCELLED: '#e74c3c'
   };
 
@@ -80,6 +81,7 @@ export class PickingBoardComponent implements OnInit {
     PREPARING: 'Preparando',
     READY: 'Listo',
     DELIVERED: 'Entregado',
+    RETURN_PENDING: 'Pendiente devolucion',
     CANCELLED: 'Cancelado'
   };
 

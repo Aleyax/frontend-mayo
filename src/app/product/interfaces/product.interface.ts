@@ -57,6 +57,7 @@ export interface ProductCreateRequest {
     colorId?: number;
     sizeId?: number;
     price: number;
+    isActive?: boolean;
     imageUrl?: string | null;
     imageFile?: { filename: string; data: string };
   }>;
@@ -76,6 +77,7 @@ export interface ProductUpdateRequest {
     colorId?: number;
     sizeId?: number;
     price: number;
+    isActive?: boolean;
     imageUrl?: string | null;
     imageFile?: { filename: string; data: string };
   }>;

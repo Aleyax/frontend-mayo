@@ -149,6 +149,81 @@
   color: #7f8c8d;
 }
 
+.return-task-box {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid #f0c39e;
+  border-radius: 8px;
+  background: #fff7f0;
+}
+
+.return-task-box h4 {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.95rem;
+  color: #8a4100;
+}
+
+.return-task-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.return-task-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.return-task-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #8a4100;
+  background: #ffe7d4;
+  border: 1px solid #f8c9a5;
+}
+
+.return-task-warning {
+  margin: 0.7rem 0 0 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  background: #fff1e5;
+  border: 1px solid #f8c9a5;
+  color: #a85300;
+  font-size: 0.82rem;
+}
+
+.return-task-list {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.return-task-item {
+  border: 1px dashed #f3b785;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+
+.return-task-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: #2c3e50;
+}
+
+.return-task-item small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #7f8c8d;
+}
+
 .transitions-list {
   display: flex;
   flex-wrap: wrap;
@@ -759,6 +834,9 @@
   --detail-primary: var(--color-primary);
   --detail-primary-content: var(--color-primary-content);
   --detail-success: var(--color-success);
+  --detail-return-bg: color-mix(in oklab, #f59e0b 16%, var(--color-base-100));
+  --detail-return-border: color-mix(in oklab, #f59e0b 42%, var(--color-base-300));
+  --detail-return-text: color-mix(in oklab, #d97706 78%, var(--color-base-content));
 }
 
 .order-detail-container {
@@ -804,6 +882,31 @@
 .status-transitions,
 .items-table thead {
   background: var(--detail-surface-soft);
+}
+
+.return-task-box {
+  background: var(--detail-return-bg);
+  border-color: var(--detail-return-border);
+}
+
+.return-task-box h4,
+.return-task-chip,
+.return-task-warning {
+  color: var(--detail-return-text);
+}
+
+.return-task-chip,
+.return-task-warning,
+.return-task-item {
+  border-color: color-mix(in oklab, var(--detail-return-border) 85%, var(--detail-border));
+}
+
+.return-task-chip {
+  background: color-mix(in oklab, var(--detail-return-bg) 72%, var(--detail-surface));
+}
+
+.return-task-item {
+  background: var(--detail-surface);
 }
 
 .transition-pill {

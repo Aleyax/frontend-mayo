@@ -30,12 +30,8 @@
                     <strong>{{ item.colorName }} / {{ item.sizeName }}</strong>
                     <p>SKU: {{ item.sku }}</p>
                     <p>Precio: S/ {{ item.unitPrice | number: '1.2-2' }}</p>
-                    <p class="pending" [class.has-pending]="item.quantity > item.availableStock">
-                      @if (item.quantity > item.availableStock) {
-                        {{ item.quantity - item.availableStock }} unidad(es) bajo confirmacion
-                      } @else {
-                        Disponible para reserva inmediata
-                      }
+                    <p class="pending" [class.has-pending]="hasPendingConfirmation(item)">
+                      {{ getAvailabilityMessage(item) }}
                     </p>
                   </div>
 
@@ -60,6 +56,30 @@
 
       <aside class="summary-panel">
         <h3>Resumen</h3>
+        @if (loadingPaymentMethods) {
+          <p class="small-muted">Cargando metodos de pago...</p>
+        }
+        @if (paymentMethodsEnabled) {
+          <div class="payment-method-block">
+            <p class="payment-title">Metodo de pago</p>
+            @if (paymentMethods.length === 0) {
+              <p class="payment-empty">No hay metodos de pago disponibles por ahora.</p>
+            } @else {
+              <div class="payment-list">
+                @for (method of paymentMethods; track method.id) {
+                  <button
+                    type="button"
+                    class="payment-pill"
+                    [class.active]="isPaymentMethodSelected(method.id)"
+                    (click)="selectPaymentMethod(method.id)"
+                  >
+                    {{ method.name }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
         <div class="summary-line">
           <span>Unidades</span>
           <strong>{{ cartService.totalUnits() }}</strong>
@@ -77,7 +97,7 @@
           <strong>S/ {{ total() | number: '1.2-2' }}</strong>
         </div>
         <p class="pending-banner" [class.show]="cartService.pendingUnits() > 0">
-          {{ cartService.pendingUnits() }} unidad(es) quedaran sujetas a confirmacion de stock.
+          Parte del pedido quedara sujeta a confirmacion de stock.
         </p>
         <button type="button" class="checkout-btn" (click)="goCheckout()">
           Continuar a checkout

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -28,7 +28,7 @@ interface ProductVariantForm extends Omit<ProductVariant, 'id' | 'sku'> {
   templateUrl: './product-modal.component.html',
   styleUrls: ['./product-modal.component.css']
 })
-export class ProductModalComponent implements OnInit {
+export class ProductModalComponent implements OnInit, AfterViewInit {
   @Input() categories: Category[] = [];
   @Input() colors: Color[] = [];
   @Input() sizes: Size[] = [];
@@ -49,11 +49,18 @@ export class ProductModalComponent implements OnInit {
   deletingImageIndex = signal<number | null>(null);
   formError = signal<string>('');
   formMessage = signal<string>('');
+  variantsDirty = signal(false);
+  imagesDirty = signal(false);
+  @ViewChild('descriptionEditor') descriptionEditor?: ElementRef<HTMLDivElement>;
 
   private productService = inject(ProductService);
 
   ngOnInit() {
     this.initializeForm();
+  }
+
+  ngAfterViewInit() {
+    this.syncDescriptionEditorWithForm();
   }
 
   initializeForm() {
@@ -68,11 +75,14 @@ export class ProductModalComponent implements OnInit {
   setEditingProduct(product: Product | null) {
     this.submitted = false;
     this.formError.set('');
+    this.formMessage.set('');
     this.variants.set([]);
     this.productImages.set([]);
     this.variantMode.set('MATRIX');
     this.selectedColorIds.set([]);
     this.selectedSizeIds.set([]);
+    this.variantsDirty.set(false);
+    this.imagesDirty.set(false);
     this.editingProduct.set(product);
 
     if (product) {
@@ -91,15 +101,19 @@ export class ProductModalComponent implements OnInit {
         this.selectedColorIds.set([]);
         this.selectedSizeIds.set([]);
         this.variants.set(firstVariant ? [{
+          id: firstVariant.id,
+          sku: firstVariant.sku,
           colorId: firstVariant.colorId || 0,
           sizeId: firstVariant.sizeId || 0,
           price: Number(firstVariant.price),
+          isActive: firstVariant.isActive !== false,
           imageUrl: firstVariant.imageUrl || undefined,
           imagePreview: firstVariant.imageUrl || undefined,
         }] : [{
           colorId: 0,
           sizeId: 0,
           price: 0,
+          isActive: true,
         }]);
       } else if (isSizeOnlyProduct) {
         const productSizeIds = productVariants.map((variant) => variant.sizeId).filter((id) => id > 0);
@@ -107,9 +121,12 @@ export class ProductModalComponent implements OnInit {
         this.selectedSizeIds.set([...new Set(productSizeIds)]);
         this.variants.set(
           productVariants.map((variant) => ({
+            id: variant.id,
+            sku: variant.sku,
             colorId: variant.colorId || 0,
             sizeId: variant.sizeId,
             price: Number(variant.price),
+            isActive: variant.isActive !== false,
             imageUrl: variant.imageUrl || undefined,
             imagePreview: variant.imageUrl || undefined,
           })),
@@ -122,9 +139,12 @@ export class ProductModalComponent implements OnInit {
         this.selectedSizeIds.set([...new Set(productSizeIds)]);
         this.variants.set(
           productVariants.map((variant) => ({
+            id: variant.id,
+            sku: variant.sku,
             colorId: variant.colorId,
             sizeId: variant.sizeId,
             price: Number(variant.price),
+            isActive: variant.isActive !== false,
             imageUrl: variant.imageUrl || undefined,
             imagePreview: variant.imageUrl || undefined,
           })),
@@ -147,6 +167,9 @@ export class ProductModalComponent implements OnInit {
         categoryId: product.categoryId,
         isActive: product.isActive,
       });
+      this.syncDescriptionEditorWithForm();
+      this.productForm.markAsPristine();
+      this.productForm.markAsUntouched();
     } else {
       this.productForm.reset({
         name: '',
@@ -155,7 +178,104 @@ export class ProductModalComponent implements OnInit {
         isActive: true,
       });
       this.variantMode.set('MATRIX');
+      this.syncDescriptionEditorWithForm();
+      this.productForm.markAsPristine();
+      this.productForm.markAsUntouched();
     }
+  }
+
+  private looksLikeHtml(value: string): boolean {
+    return /<\/?[a-z][\s\S]*>/i.test(value);
+  }
+
+  private sanitizeDescriptionHtml(html: string): string {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    container.querySelectorAll('script,style').forEach((node) => node.remove());
+    container.querySelectorAll('*').forEach((element) => {
+      Array.from(element.attributes).forEach((attr) => {
+        if (attr.name.toLowerCase().startsWith('on')) {
+          element.removeAttribute(attr.name);
+        }
+      });
+    });
+    return container.innerHTML;
+  }
+
+  private syncDescriptionEditorWithForm() {
+    const editor = this.descriptionEditor?.nativeElement;
+    if (!editor) return;
+    const value = String(this.productForm.get('description')?.value || '');
+    if (!value) {
+      editor.innerHTML = '';
+      return;
+    }
+    if (this.looksLikeHtml(value)) {
+      editor.innerHTML = value;
+      return;
+    }
+    editor.textContent = value;
+  }
+
+  onDescriptionInput() {
+    const editor = this.descriptionEditor?.nativeElement;
+    const control = this.productForm.get('description');
+    if (!editor || !control) return;
+    const text = (editor.textContent || '').trim();
+    const html = text ? this.sanitizeDescriptionHtml(editor.innerHTML) : '';
+    control.setValue(html, { emitEvent: false });
+    control.markAsDirty();
+  }
+
+  private focusDescriptionEditor() {
+    this.descriptionEditor?.nativeElement.focus();
+  }
+
+  applyDescriptionCommand(command: string, value?: string) {
+    this.focusDescriptionEditor();
+    document.execCommand(command, false, value);
+    this.onDescriptionInput();
+  }
+
+  setDescriptionBlock(tagName: 'p' | 'h2' | 'h3' | 'blockquote') {
+    this.applyDescriptionCommand('formatBlock', tagName);
+  }
+
+  setDescriptionFont(fontName: string) {
+    if (!fontName) return;
+    this.applyDescriptionCommand('fontName', fontName);
+  }
+
+  setDescriptionColor(color: string) {
+    if (!color) return;
+    this.applyDescriptionCommand('foreColor', color);
+  }
+
+  setDescriptionFontSize(size: string) {
+    if (!size) return;
+    this.applyDescriptionCommand('fontSize', size);
+  }
+
+  insertDescriptionGrid() {
+    const tableHtml = `
+      <table style="width:100%; border-collapse: collapse; margin: 0.5rem 0;">
+        <tbody>
+          <tr>
+            <td style="border:1px solid #94a3b8; padding:6px;">Celda 1</td>
+            <td style="border:1px solid #94a3b8; padding:6px;">Celda 2</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #94a3b8; padding:6px;">Celda 3</td>
+            <td style="border:1px solid #94a3b8; padding:6px;">Celda 4</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    this.applyDescriptionCommand('insertHTML', tableHtml);
+  }
+
+  clearDescriptionFormat() {
+    this.applyDescriptionCommand('removeFormat');
   }
 
   private extractPublicIdFromUrl(url: string): string {
@@ -182,6 +302,7 @@ export class ProductModalComponent implements OnInit {
     }
 
     this.variantMode.set(mode);
+    this.variantsDirty.set(true);
     this.formError.set('');
 
     if (mode === 'SIMPLE') {
@@ -192,6 +313,7 @@ export class ProductModalComponent implements OnInit {
         colorId: firstVariant?.colorId ?? 0,
         sizeId: firstVariant?.sizeId ?? 0,
         price: Number(firstVariant?.price || 0),
+        isActive: firstVariant?.isActive !== false,
         imageUrl: firstVariant?.imageUrl,
         imagePreview: firstVariant?.imagePreview || firstVariant?.imageUrl || undefined,
         imageFile: firstVariant?.imageFile,
@@ -218,6 +340,7 @@ export class ProductModalComponent implements OnInit {
 
   toggleColor(colorId: number, checked: boolean) {
     const current = this.selectedColorIds();
+    this.variantsDirty.set(true);
     if (checked) {
       this.selectedColorIds.set([...current, colorId]);
     } else {
@@ -227,6 +350,7 @@ export class ProductModalComponent implements OnInit {
 
   toggleSize(sizeId: number, checked: boolean) {
     const current = this.selectedSizeIds();
+    this.variantsDirty.set(true);
     if (checked) {
       this.selectedSizeIds.set([...current, sizeId]);
     } else {
@@ -259,11 +383,13 @@ export class ProductModalComponent implements OnInit {
           colorId: 0,
           sizeId,
           price: 0,
+          isActive: true,
           imageUrl: undefined,
         } as ProductVariantForm;
       });
 
       this.variants.set(mergedVariants);
+      this.variantsDirty.set(true);
       return;
     }
 
@@ -281,15 +407,18 @@ export class ProductModalComponent implements OnInit {
         colorId: variant.colorId,
         sizeId: variant.sizeId,
         price: 0,
+        isActive: true,
         imageUrl: undefined,
       } as ProductVariantForm;
     });
 
     this.variants.set(mergedVariants);
+    this.variantsDirty.set(true);
   }
 
   onVariantPriceChange(index: number, value: string) {
     const price = Number(value);
+    this.variantsDirty.set(true);
     this.variants.update((current) => {
       const next = [...current];
       next[index] = { ...next[index], price: Number.isNaN(price) ? 0 : price };
@@ -298,9 +427,19 @@ export class ProductModalComponent implements OnInit {
   }
 
   onVariantImageChange(index: number, value: string) {
+    this.variantsDirty.set(true);
     this.variants.update((current) => {
       const next = [...current];
       next[index] = { ...next[index], imageUrl: value.trim() || undefined };
+      return next;
+    });
+  }
+
+  onVariantActiveChange(index: number, checked: boolean) {
+    this.variantsDirty.set(true);
+    this.variants.update((current) => {
+      const next = [...current];
+      next[index] = { ...next[index], isActive: checked };
       return next;
     });
   }
@@ -309,6 +448,7 @@ export class ProductModalComponent implements OnInit {
     if (!files) {
       return;
     }
+    this.imagesDirty.set(true);
 
     const selectedImages = Array.from(files).map((file) => ({
       file,
@@ -323,6 +463,7 @@ export class ProductModalComponent implements OnInit {
     this.formError.set('');
     this.formMessage.set('');
     this.deletingImageIndex.set(index);
+    this.imagesDirty.set(true);
 
     if (image.publicId) {
       try {
@@ -347,6 +488,7 @@ export class ProductModalComponent implements OnInit {
 
     const file = files[0];
     const preview = URL.createObjectURL(file);
+    this.variantsDirty.set(true);
 
     this.variants.update((current) => {
       const next = [...current];
@@ -402,6 +544,7 @@ export class ProductModalComponent implements OnInit {
       } else if (mode === 'SIZE_ONLY') {
         variantPayload.sizeId = variant.sizeId;
       }
+      variantPayload.isActive = variant.isActive !== false;
 
       if (variant.imageUrl) {
         variantPayload.imageUrl = variant.imageUrl;
@@ -429,53 +572,75 @@ export class ProductModalComponent implements OnInit {
     }
 
     const name = this.productForm.value.name.trim();
-    const description = this.productForm.value.description?.trim();
+    const description = String(this.productForm.value.description || '').trim();
     const categoryId = Number(this.productForm.value.categoryId);
     const isActive = this.productForm.value.isActive;
     const mode = this.variantMode();
 
     const currentVariants = this.variants();
-    if (!currentVariants.length) {
-      this.formError.set(
-        this.isSimpleMode
-          ? 'Configura el precio de la variante unica antes de guardar.'
-          : 'Genera las variantes antes de crear o actualizar el producto.',
-      );
-      return;
+    const shouldValidateVariants = !this.isEditing || this.variantsDirty();
+    if (shouldValidateVariants) {
+      if (!currentVariants.length) {
+        this.formError.set(
+          this.isSimpleMode
+            ? 'Configura el precio de la variante unica antes de guardar.'
+            : 'Genera las variantes antes de crear o actualizar el producto.',
+        );
+        return;
+      }
+
+      const invalidVariant = currentVariants.some((variant) => variant.price <= 0);
+      if (invalidVariant) {
+        this.formError.set('Cada variante debe tener un precio mayor que 0.');
+        return;
+      }
     }
 
-    const invalidVariant = currentVariants.some((variant) => variant.price <= 0);
-    if (invalidVariant) {
-      this.formError.set('Cada variante debe tener un precio mayor que 0.');
+    if (this.isEditing) {
+      const original = this.editingProduct();
+      if (!original) return;
+
+      const payload: ProductUpdateRequest = {};
+      const normalizedDescription = description || '';
+      const originalDescription = original.description || '';
+
+      if (name !== original.name) payload.name = name;
+      if (normalizedDescription !== originalDescription) payload.description = normalizedDescription;
+      if (categoryId !== original.categoryId) payload.categoryId = categoryId;
+      if (isActive !== original.isActive) payload.isActive = isActive;
+
+      if (this.imagesDirty()) {
+        const keptImageUrls = this.productImages()
+          .filter((image) => image.url)
+          .map((image) => image.url!) || [];
+        const imageFiles = await this.buildImageFilesPayload();
+        payload.imageUrls = keptImageUrls;
+        if (imageFiles.length) payload.imageFiles = imageFiles;
+      }
+
+      if (this.variantsDirty()) {
+        const payloadVariants = await this.buildVariantPayload(currentVariants, mode);
+        payload.variantMode = mode;
+        payload.colorIds = mode === 'MATRIX' ? this.selectedColorIds() : [];
+        payload.sizeIds = this.isSimpleMode ? [] : this.selectedSizeIds();
+        payload.variants = payloadVariants;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        this.formMessage.set('No hay cambios para actualizar.');
+        return;
+      }
+
+      this.productSaved.emit({
+        mode: 'edit',
+        id: original.id,
+        payload,
+      });
       return;
     }
 
     const imageFiles = await this.buildImageFilesPayload();
     const payloadVariants = await this.buildVariantPayload(currentVariants, mode);
-
-    if (this.isEditing) {
-      const keptImageUrls = this.productImages()
-        .filter((image) => image.url)
-        .map((image) => image.url!) || [];
-
-      this.productSaved.emit({
-        mode: 'edit',
-        id: this.editingProduct()?.id,
-        payload: {
-          name,
-          description,
-          categoryId,
-          isActive,
-          variantMode: mode,
-          colorIds: mode === 'MATRIX' ? this.selectedColorIds() : [],
-          sizeIds: this.isSimpleMode ? [] : this.selectedSizeIds(),
-          imageUrls: keptImageUrls,
-          imageFiles: imageFiles.length ? imageFiles : undefined,
-          variants: payloadVariants,
-        }
-      });
-      return;
-    }
 
     const payload: ProductCreateRequest = {
       name,

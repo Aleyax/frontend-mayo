@@ -1,10 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   MarketplaceCatalogProduct,
   MarketplaceCatalogResponse,
+  MarketplaceCheckoutPaymentConfig,
+  MarketplaceMyOrderSummary,
   MarketplaceOrderSummary,
   MarketplaceTrackResponse,
 } from '../interfaces/marketplace.interface';
@@ -38,6 +40,7 @@ export interface MarketplaceCheckoutPayload {
   pickupStoreId?: number;
   deliveryAddress?: string;
   deliveryReference?: string;
+  paymentMethodId?: number;
   note?: string;
   items: Array<{
     variantId: number;
@@ -76,6 +79,10 @@ export class MarketplaceService {
     return this.http.get<{ data: MarketplacePublicStore[] }>(`${this.baseUrl}/stores`);
   }
 
+  getCheckoutPaymentMethods(): Observable<{ data: MarketplaceCheckoutPaymentConfig }> {
+    return this.http.get<{ data: MarketplaceCheckoutPaymentConfig }>(`${this.baseUrl}/checkout-payment-methods`);
+  }
+
   createMarketplaceOrder(payload: MarketplaceCheckoutPayload): Observable<{ success: boolean; data: any; message: string }> {
     return this.http.post<{ success: boolean; data: any; message: string }>(`${this.baseUrl}/orders`, payload);
   }
@@ -87,5 +94,19 @@ export class MarketplaceService {
   trackOrder(code: string, phone: string): Observable<{ success: boolean; data: MarketplaceTrackResponse }> {
     const params = new HttpParams().set('code', code).set('phone', phone);
     return this.http.get<{ success: boolean; data: MarketplaceTrackResponse }>(`${this.baseUrl}/orders/track`, { params });
+  }
+
+  listMyOrders(phone: string, email?: string, take: number = 20): Observable<{ success: boolean; data: MarketplaceMyOrderSummary[] }> {
+    let params = new HttpParams().set('phone', phone).set('take', String(take));
+    if (email?.trim()) {
+      params = params.set('email', email.trim());
+    }
+    return this.http.get<{ success: boolean; data: MarketplaceMyOrderSummary[] }>(`${this.baseUrl}/orders/my`, { params });
+  }
+
+  listMyOrdersAuthenticated(token: string): Observable<{ success: boolean; data: MarketplaceMyOrderSummary[] }> {
+    return this.http.get<{ success: boolean; data: MarketplaceMyOrderSummary[] }>(`${this.baseUrl}/orders/my-auth`, {
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+    });
   }
 }

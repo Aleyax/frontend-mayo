@@ -1,0 +1,79 @@
+<section class="mk-account-page">
+  <header class="account-head">
+    <a routerLink="/marketplace" class="back-link">Volver al marketplace</a>
+    <h1>Mi cuenta marketplace</h1>
+    <p>Actualiza tus datos y revisa tus pedidos recientes.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <p class="message error">{{ errorMessage() }}</p>
+  }
+  @if (successMessage()) {
+    <p class="message success">{{ successMessage() }}</p>
+  }
+
+  <div class="account-layout">
+    <section class="profile-card">
+      <h2>Datos personales</h2>
+      @if (loadingProfile()) {
+        <p class="muted">Cargando perfil...</p>
+      }
+
+      <label>
+        Nombres
+        <input type="text" [(ngModel)]="firstName" />
+      </label>
+      <label>
+        Apellidos
+        <input type="text" [(ngModel)]="lastName" />
+      </label>
+      <label>
+        Email (solo lectura)
+        <input type="email" [value]="email" readonly />
+      </label>
+      <label>
+        Telefono
+        <input type="text" [(ngModel)]="phone" />
+      </label>
+      <label>
+        Direccion
+        <input type="text" [(ngModel)]="address" />
+      </label>
+
+      <button type="button" class="save-btn" (click)="saveProfile()" [disabled]="savingProfile()">
+        {{ savingProfile() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </section>
+
+    <section class="orders-card">
+      <div class="orders-head">
+        <h2>Ultimos pedidos</h2>
+        <button type="button" class="refresh-btn" (click)="reloadOrders()" [disabled]="loadingOrders()">
+          {{ loadingOrders() ? 'Actualizando...' : 'Recargar' }}
+        </button>
+      </div>
+
+      @if (loadingOrders()) {
+        <p class="muted">Cargando pedidos...</p>
+      } @else if (myOrders().length === 0) {
+        <p class="muted">Aun no tienes pedidos registrados.</p>
+      } @else {
+        <div class="orders-list">
+          @for (order of myOrders(); track order.code) {
+            <button type="button" class="order-row" (click)="goToTrackOrder(order.code)">
+              <div class="main">
+                <strong>{{ order.code }}</strong>
+                <span>{{ order.publicStatus }}</span>
+              </div>
+              <div class="meta">
+                <span>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                <span>Total: S/ {{ order.totals.total | number: '1.2-2' }}</span>
+                <span [class.pending]="order.hasPending">Pendiente: {{ order.pendingUnits }}</span>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</section>

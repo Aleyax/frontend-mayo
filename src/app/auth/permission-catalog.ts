@@ -45,7 +45,8 @@ const ROLE_PERMISSION_MATRIX: Record<string, PermissionCode[]> = {
     'picking.start',
     'picking.update',
     'picking.complete',
-    'payment_methods.manage'
+    'payment_methods.manage',
+    'settings.manage'
   ],
   SELLER: [
     'dashboard.view',

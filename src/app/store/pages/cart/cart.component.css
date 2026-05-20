@@ -175,6 +175,56 @@
   color: var(--mkc-text);
 }
 
+.small-muted {
+  margin: 0 0 0.55rem;
+  color: var(--mkc-muted);
+  font-size: 0.8rem;
+}
+
+.payment-method-block {
+  border: 1px solid var(--mkc-border);
+  border-radius: 10px;
+  background: var(--mkc-surface-soft);
+  padding: 0.55rem;
+  margin-bottom: 0.7rem;
+}
+
+.payment-title {
+  margin: 0 0 0.5rem;
+  color: var(--mkc-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.payment-empty {
+  margin: 0;
+  color: var(--mkc-muted);
+  font-size: 0.78rem;
+}
+
+.payment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.payment-pill {
+  border: 1px solid var(--mkc-border);
+  border-radius: 999px;
+  background: var(--mkc-surface);
+  color: var(--mkc-text);
+  padding: 0.3rem 0.62rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-pill.active {
+  border-color: color-mix(in oklab, var(--mkc-primary) 54%, var(--mkc-border));
+  background: color-mix(in oklab, var(--mkc-primary) 16%, var(--mkc-surface));
+  color: color-mix(in oklab, var(--mkc-primary) 72%, var(--mkc-text));
+}
+
 .summary-line {
   display: flex;
   justify-content: space-between;

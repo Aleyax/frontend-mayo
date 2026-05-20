@@ -1,0 +1,96 @@
+<div class="settings-page">
+  <div>
+    <p class="section-kicker">Admin Dashboard</p>
+    <h1 class="section-title">Configuracion Operativa</h1>
+    <p class="section-subtitle">
+      Activa o desactiva reglas globales del flujo de ordenes.
+    </p>
+  </div>
+
+  <section class="settings-card">
+    <div class="settings-card-head">
+      <div>
+        <h2>Gestion de Responsabilidades de Devolucion</h2>
+        <p>
+          Cuando esta activa, la devolucion pendiente exige responsable asignado
+          y aceptacion antes de confirmar.
+        </p>
+      </div>
+      <label class="toggle-wrap">
+        <span>{{ returnResponsibilityManagementEnabled() ? 'Activa' : 'Desactivada' }}</span>
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          [checked]="returnResponsibilityManagementEnabled()"
+          [disabled]="loading() || saving()"
+          (change)="onToggleReturnResponsibility($event.target.checked)"
+        />
+      </label>
+    </div>
+
+    <div class="settings-actions">
+      <button type="button" class="btn btn-outline" (click)="reload()" [disabled]="saving()">
+        Recargar
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="resetChanges()"
+        [disabled]="loading() || saving() || !hasChanges"
+      >
+        Deshacer
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="saveSettings()"
+        [disabled]="loading() || saving() || !hasChanges"
+      >
+        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </section>
+
+  <section class="settings-card">
+    <div class="settings-card-head">
+      <div>
+        <h2>Metodos de Pago en Marketplace</h2>
+        <p>
+          Define si el checkout del marketplace mostrara metodos de pago y cuales estaran disponibles para el cliente.
+        </p>
+      </div>
+      <label class="toggle-wrap">
+        <span>{{ marketplacePaymentMethodsEnabled() ? 'Activa' : 'Desactivada' }}</span>
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          [checked]="marketplacePaymentMethodsEnabled()"
+          [disabled]="loading() || loadingPaymentMethods() || saving()"
+          (change)="onToggleMarketplacePayments($event.target.checked)"
+        />
+      </label>
+    </div>
+
+    @if (loadingPaymentMethods()) {
+      <p class="settings-muted">Cargando metodos de pago activos...</p>
+    } @else if (paymentMethods().length === 0) {
+      <p class="settings-muted">No hay metodos de pago activos para configurar.</p>
+    } @else {
+      <div class="payment-method-grid">
+        @for (method of paymentMethods(); track method.id) {
+          <label class="payment-method-option">
+            <input
+              type="checkbox"
+              [checked]="isPaymentMethodSelected(method.id)"
+              [disabled]="loading() || saving() || !marketplacePaymentMethodsEnabled()"
+              (change)="onTogglePaymentMethod(method.id, $event.target.checked)"
+            />
+            <span>{{ method.name }}</span>
+          </label>
+        }
+      </div>
+    }
+  </section>
+
+  <app-alert></app-alert>
+</div>

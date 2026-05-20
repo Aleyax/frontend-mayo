@@ -152,12 +152,8 @@
                     S/ {{ product.minPrice | number: '1.2-2' }}
                   }
                 </p>
-                <p class="product-stock" [class.warning]="!product.hasStock">
-                  @if (product.hasStock) {
-                    Stock disponible: {{ product.totalAvailableStock }}
-                  } @else {
-                    Pedido sujeto a disponibilidad
-                  }
+                <p class="product-stock" [class.warning]="isProductAvailabilityWarning(product)">
+                  {{ getProductAvailabilityLabel(product) }}
                 </p>
                 <div class="meta-row">
                   <span>{{ product.colors.length }} color(es)</span>

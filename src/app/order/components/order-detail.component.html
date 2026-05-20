@@ -69,6 +69,95 @@
           >
             Cambiar Estado
           </button>
+
+          @if (order.status === 'RETURN_PENDING') {
+            <div class="status-transitions">
+              <p>Devolucion de inventario pendiente:</p>
+              <div class="info-row">
+                <label>Cancelado por:</label>
+                <span>
+                  {{ returnWorkflow?.cancelledBy?.firstName || '-' }}
+                  {{ returnWorkflow?.cancelledBy?.lastName || '' }}
+                </span>
+              </div>
+              @if (isReturnResponsibilityManagementEnabled()) {
+                <div class="info-row">
+                  <label>Responsable:</label>
+                  <span>
+                    {{ returnWorkflow?.responsible?.firstName || '-' }}
+                    {{ returnWorkflow?.responsible?.lastName || '' }}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <label>Aceptacion:</label>
+                  <span>
+                    {{ returnWorkflow?.acceptanceStatus === 'ACCEPTED' ? 'Aceptada' : 'Pendiente' }}
+                  </span>
+                </div>
+              }
+              <div class="info-row">
+                <label>Solicitado:</label>
+                <span>{{ returnWorkflow?.requestedAt ? (returnWorkflow?.requestedAt | date: 'short') : '-' }}</span>
+              </div>
+              @if (isReturnResponsibilityManagementEnabled() && returnWorkflow?.acceptedAt) {
+                <div class="info-row">
+                  <label>Aceptado:</label>
+                  <span>{{ returnWorkflow?.acceptedAt | date: 'short' }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="return-task-box">
+              <h4>{{ getReturnPendingTitle() }}</h4>
+              <p class="return-task-description">{{ getReturnPendingDescription() }}</p>
+
+              <div class="return-task-metrics">
+                <span class="return-task-chip">{{ getReturnPendingUnits() }} unidades</span>
+                <span class="return-task-chip">{{ getReturnPendingItemsCount() }} items</span>
+                <span class="return-task-chip">{{ getReturnPendingStoresCount() }} tiendas</span>
+              </div>
+
+              @if (isReturnResponsibilityManagementEnabled() && isReturnDelegatedToCurrentUser() && !isReturnResponsibilityAccepted()) {
+                <p class="return-task-warning">
+                  Esta devolucion fue delegada a tu usuario y esta pendiente de aceptacion.
+                </p>
+              }
+
+              @if (getReturnPendingItems().length > 0) {
+                <div class="return-task-list">
+                  @for (item of getReturnPendingItems(); track item.id ?? item.variantId ?? $index) {
+                    <div class="return-task-item">
+                      <div class="return-task-main">
+                        <strong>{{ getReturnItemLabel(item) }}</strong>
+                        <span>{{ item.returnQuantity }} und.</span>
+                      </div>
+                      <small>Tienda: {{ getReturnItemStoresLabel(item) }}</small>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="no-transitions">No hay productos separados por devolver.</p>
+              }
+            </div>
+
+            <div class="action-buttons">
+              @if (canAcceptReturnResponsibility()) {
+                <button type="button" (click)="acceptReturnResponsibility()" class="btn-action btn-secondary">
+                  Aceptar responsabilidad
+                </button>
+              }
+              @if (canDelegateReturnResponsibility()) {
+                <button type="button" (click)="openReturnDelegateModal()" class="btn-action btn-secondary">
+                  Delegar responsabilidad
+                </button>
+              }
+              @if (canCompleteReturnAndCancel()) {
+                <button type="button" (click)="completeReturnAndCancel()" class="btn-action btn-success">
+                  Confirmar devolucion
+                </button>
+              }
+            </div>
+          }
         </div>
 
         <div class="card">
@@ -598,9 +687,17 @@
                     <option [ngValue]="user.id">{{ user.firstName }} {{ user.lastName }}</option>
                   }
                 </select>
+                @if (loadingUsers) {
+                  <p class="no-transitions">Cargando usuarios...</p>
+                }
+                @if (!loadingUsers && usersLoadError) {
+                  <p class="no-transitions">{{ usersLoadError }}</p>
+                }
               </div>
               <div class="modal-buttons">
-                <button type="button" (click)="submitAssign()" class="btn-submit">Asignar</button>
+                <button type="button" (click)="submitAssign()" class="btn-submit" [disabled]="loadingUsers || users.length === 0">
+                  Asignar
+                </button>
                 <button type="button" (click)="showAssignModal = false" class="btn-cancel">
                   Cancelar
                 </button>
@@ -623,6 +720,48 @@
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      }
+
+      @if (showReturnDelegateModal) {
+        <div class="modal-overlay" (click)="showReturnDelegateModal = false">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h3>Delegar Devolucion</h3>
+            <form [formGroup]="returnDelegateForm">
+              <div class="form-group">
+                <label>Usuario responsable</label>
+                <select formControlName="userId" class="form-input">
+                  <option [ngValue]="null">Seleccionar usuario</option>
+                  @for (user of users; track user.id) {
+                    <option [ngValue]="user.id">{{ user.firstName }} {{ user.lastName }}</option>
+                  }
+                </select>
+                @if (loadingUsers) {
+                  <p class="no-transitions">Cargando usuarios...</p>
+                }
+                @if (!loadingUsers && usersLoadError) {
+                  <p class="no-transitions">{{ usersLoadError }}</p>
+                }
+              </div>
+              <div class="form-group">
+                <label>Nota (Opcional)</label>
+                <textarea formControlName="note" class="form-input" rows="3"></textarea>
+              </div>
+              <div class="modal-buttons">
+                <button
+                  type="button"
+                  (click)="submitReturnDelegation()"
+                  class="btn-submit"
+                  [disabled]="loadingUsers || users.length === 0"
+                >
+                  Delegar
+                </button>
+                <button type="button" (click)="showReturnDelegateModal = false" class="btn-cancel">
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       }

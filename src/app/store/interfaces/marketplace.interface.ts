@@ -93,3 +93,39 @@ export interface MarketplaceTrackResponse {
   }>;
 }
 
+export interface MarketplaceMyOrderSummary {
+  code: string;
+  status: string;
+  publicStatus: string;
+  createdAt: string;
+  totals: {
+    subtotal: number;
+    tax: number;
+    total: number;
+  };
+  requestedUnits: number;
+  reservedUnits: number;
+  pendingUnits: number;
+  hasPending: boolean;
+  reviewMessage: string;
+}
+
+export interface MarketplaceCheckoutPaymentMethod {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export interface MarketplaceCheckoutPaymentConfig {
+  enabled: boolean;
+  methods: MarketplaceCheckoutPaymentMethod[];
+}
+
+export interface MarketplaceAuthUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address?: string | null;
+}

@@ -1,0 +1,190 @@
+:host {
+  --mka-border: color-mix(in oklab, var(--color-base-content, #0f172a) 14%, transparent);
+  --mka-surface: var(--color-base-100, #ffffff);
+  --mka-surface-soft: color-mix(in oklab, var(--mka-surface) 84%, var(--mka-text) 16%);
+  --mka-text: var(--color-base-content, #0f172a);
+  --mka-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
+}
+
+.mk-account-page {
+  min-height: calc(100vh - 3rem);
+  background: var(--color-base-200, #f4f7fb);
+  padding: 1rem;
+}
+
+.account-head {
+  border: 1px solid var(--mka-border);
+  border-radius: 12px;
+  background: var(--mka-surface);
+  padding: 0.9rem 1rem;
+}
+
+.back-link {
+  color: var(--color-info, #0b63ce);
+  text-decoration: none;
+}
+
+.account-head h1 {
+  margin: 0.35rem 0 0.2rem;
+  color: var(--mka-text);
+}
+
+.account-head p {
+  margin: 0;
+  color: var(--mka-muted);
+}
+
+.message {
+  margin: 0.75rem 0 0;
+  border-radius: 8px;
+  padding: 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.message.error {
+  border: 1px solid color-mix(in oklab, #be123c 30%, var(--mka-border));
+  background: color-mix(in oklab, #be123c 10%, var(--mka-surface));
+  color: #be123c;
+}
+
+.message.success {
+  border: 1px solid color-mix(in oklab, #0f766e 32%, var(--mka-border));
+  background: color-mix(in oklab, #0f766e 9%, var(--mka-surface));
+  color: #0f766e;
+}
+
+.account-layout {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.profile-card,
+.orders-card {
+  border: 1px solid var(--mka-border);
+  border-radius: 12px;
+  background: var(--mka-surface);
+  padding: 0.9rem;
+}
+
+.profile-card h2,
+.orders-card h2 {
+  margin: 0 0 0.7rem;
+  color: var(--mka-text);
+  font-size: 1rem;
+}
+
+.profile-card label {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--mka-text);
+  font-weight: 700;
+}
+
+.profile-card input {
+  border: 1px solid var(--mka-border);
+  border-radius: 8px;
+  background: var(--mka-surface-soft);
+  color: var(--mka-text);
+  padding: 0.5rem 0.6rem;
+}
+
+.profile-card input[readonly] {
+  opacity: 0.82;
+}
+
+.save-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: 9px;
+  background: #ff6a00;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.62rem;
+  cursor: pointer;
+}
+
+.orders-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.refresh-btn {
+  border: 1px solid var(--mka-border);
+  border-radius: 8px;
+  background: var(--mka-surface-soft);
+  color: var(--mka-text);
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+
+.muted {
+  margin: 0;
+  color: var(--mka-muted);
+}
+
+.orders-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.order-row {
+  border: 1px solid var(--mka-border);
+  border-radius: 9px;
+  background: var(--mka-surface-soft);
+  padding: 0.62rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.order-row .main {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.order-row strong {
+  color: var(--mka-text);
+}
+
+.order-row .main span {
+  color: var(--mka-muted);
+  font-size: 0.8rem;
+}
+
+.order-row .meta {
+  display: grid;
+  gap: 0.15rem;
+  text-align: right;
+  color: var(--mka-muted);
+  font-size: 0.76rem;
+}
+
+.order-row .meta .pending {
+  color: #92400e;
+  font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .account-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .order-row {
+    flex-direction: column;
+  }
+
+  .order-row .meta {
+    text-align: left;
+  }
+}
+

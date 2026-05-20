@@ -7,6 +7,8 @@ import { CartComponent } from "./pages/cart/cart.component";
 import { CheckoutComponent } from "./pages/checkout/checkout.component";
 import { OrderConfirmationComponent } from "./pages/order-confirmation/order-confirmation.component";
 import { TrackOrderComponent } from "./pages/track-order/track-order.component";
+import { MarketplaceAuthComponent } from "./pages/marketplace-auth/marketplace-auth.component";
+import { AccountDashboardComponent } from "./pages/account-dashboard/account-dashboard.component";
 
 export const storeRoutes : Routes = [
   {
@@ -34,6 +36,14 @@ export const storeRoutes : Routes = [
       {
         path: 'marketplace/checkout',
         component: CheckoutComponent
+      },
+      {
+        path: 'marketplace/auth',
+        component: MarketplaceAuthComponent
+      },
+      {
+        path: 'marketplace/account',
+        component: AccountDashboardComponent
       },
       {
         path: 'marketplace/order-confirmation/:code',

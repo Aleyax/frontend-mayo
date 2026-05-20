@@ -46,6 +46,107 @@
   white-space: nowrap;
 }
 
+.admin-notifications {
+  position: relative;
+}
+
+.notification-button {
+  position: relative;
+}
+
+.notification-bell {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.notification-count {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  width: min(360px, 88vw);
+  max-height: 420px;
+  overflow: auto;
+  z-index: 80;
+  border-radius: 12px;
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.notification-list {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem;
+}
+
+.notification-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-base-300);
+  border-radius: 10px;
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+  padding: 0.6rem 0.65rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.notification-item:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-100));
+  transform: translateY(-1px);
+}
+
+.notification-item-title {
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.notification-item-detail {
+  margin-top: 0.2rem;
+  font-size: 0.77rem;
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+}
+
+.notification-item-status {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-warning);
+}
+
+.notification-empty {
+  margin: 0;
+  padding: 0.9rem 0.8rem;
+  font-size: 0.82rem;
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+}
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -127,6 +228,11 @@
   .admin-navbar-user-name {
     max-width: 120px;
     font-size: 0.8rem;
+  }
+
+  .notification-panel {
+    right: -28px;
+    width: min(340px, 95vw);
   }
 
   .admin-navbar-logout {

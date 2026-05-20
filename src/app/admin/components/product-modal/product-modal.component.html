@@ -55,7 +55,53 @@
 
         <div class="form-control w-full">
           <label class="label"><span class="label-text">Descripción</span></label>
-          <textarea formControlName="description" class="textarea textarea-bordered w-full" rows="3" placeholder="Descripción opcional"></textarea>
+          <div class="description-editor-shell">
+  <div class="description-toolbar">
+    <select class="select select-bordered select-xs" (change)="setDescriptionBlock($any($event.target).value)">
+      <option value="p">Parrafo</option>
+      <option value="h2">Titulo H2</option>
+      <option value="h3">Titulo H3</option>
+      <option value="blockquote">Cita</option>
+    </select>
+
+    <select class="select select-bordered select-xs" (change)="setDescriptionFont($any($event.target).value)">
+      <option value="">Fuente</option>
+      <option value="Arial">Arial</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Courier New">Courier</option>
+      <option value="Tahoma">Tahoma</option>
+    </select>
+
+    <select class="select select-bordered select-xs" (change)="setDescriptionFontSize($any($event.target).value)">
+      <option value="">Tamano</option>
+      <option value="2">Pequeno</option>
+      <option value="3">Normal</option>
+      <option value="5">Grande</option>
+    </select>
+
+    <input type="color" class="input input-bordered input-xs color-picker" (change)="setDescriptionColor($any($event.target).value)" />
+
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('bold')"><b>B</b></button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('italic')"><i>I</i></button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('underline')"><u>U</u></button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('insertUnorderedList')">Lista</button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('insertOrderedList')">Numerada</button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('justifyLeft')">Izq</button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('justifyCenter')">Centro</button>
+    <button class="btn btn-xs" type="button" (click)="applyDescriptionCommand('justifyRight')">Der</button>
+    <button class="btn btn-xs" type="button" (click)="insertDescriptionGrid()">Grilla</button>
+    <button class="btn btn-xs" type="button" (click)="clearDescriptionFormat()">Limpiar</button>
+  </div>
+
+  <div
+    #descriptionEditor
+    class="description-editor-area"
+    contenteditable="true"
+    data-placeholder="Descripcion con formato (fuente, tablas, listas...)"
+    (input)="onDescriptionInput()"
+    (blur)="onDescriptionInput()"
+  ></div>
+</div>
         </div>
 
         <div class="card bg-base-200 p-4">
@@ -183,6 +229,7 @@
                     <th>Color</th>
                     <th>Talla</th>
                     <th>Precio</th>
+                    <th>Activo</th>
                     <th>Imagen</th>
                     <th>Preview</th>
                   </tr>
@@ -201,6 +248,14 @@
                           class="input input-bordered input-sm w-20"
                           [value]="variant.price"
                           (input)="onVariantPriceChange($index, $event.target.value)"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm"
+                          [checked]="variant.isActive !== false"
+                          (change)="onVariantActiveChange($index, $event.target.checked)"
                         />
                       </td>
                       <td>
@@ -244,3 +299,4 @@
     <button>cerrar</button>
   </form>
 </dialog>
+

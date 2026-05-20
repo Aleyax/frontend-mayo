@@ -54,6 +54,49 @@
   color: var(--color-info, #0b63ce);
 }
 
+.mk-auth-link {
+  border: 1px solid color-mix(in oklab, var(--color-base-content, #0f172a) 16%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, #ff6a00 10%, var(--color-base-100, #ffffff));
+  color: #bb4700;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.32rem 0.62rem;
+}
+
+.mk-account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid color-mix(in oklab, var(--color-base-content, #0f172a) 16%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-base-100, #ffffff) 86%, var(--color-base-content, #0f172a) 14%);
+  padding: 0.24rem 0.3rem 0.24rem 0.58rem;
+}
+
+.account-name {
+  color: var(--color-base-content, #0f172a);
+  font-size: 0.78rem;
+  font-weight: 700;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+
+.account-logout {
+  border: 1px solid color-mix(in oklab, #be123c 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, #be123c 8%, transparent);
+  color: #be123c;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.24rem 0.46rem;
+  cursor: pointer;
+}
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -121,10 +164,20 @@
   .mk-actions {
     width: 100%;
     justify-content: space-between;
+    row-gap: 0.4rem;
   }
 
   .mk-topbar nav {
     flex: 1 1 auto;
+  }
+
+  .mk-auth-link,
+  .mk-account-pill {
+    order: 2;
+  }
+
+  .theme-toggle {
+    order: 3;
   }
 
   .theme-toggle-track {

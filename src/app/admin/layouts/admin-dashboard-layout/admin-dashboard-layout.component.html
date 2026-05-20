@@ -24,6 +24,52 @@
         <div class="admin-navbar-title">Panel de Administracion</div>
       </div>
       <div class="admin-navbar-right">
+        <div class="admin-notifications">
+          <button
+            type="button"
+            class="btn btn-ghost btn-circle notification-button"
+            aria-label="Notificaciones de tareas pendientes"
+            title="Tareas pendientes"
+            (click)="toggleNotifications()"
+          >
+            <span class="notification-bell" aria-hidden="true">🔔</span>
+            @if (pendingAssignmentsCount > 0) {
+              <span class="notification-count">{{ pendingAssignmentsCount }}</span>
+            }
+          </button>
+
+          @if (notificationsOpen) {
+            <div class="notification-panel">
+              <div class="notification-panel-header">
+                <strong>Pendientes asignados</strong>
+                <button type="button" class="btn btn-ghost btn-xs" (click)="closeNotifications()">Cerrar</button>
+              </div>
+
+              @if (loadingNotifications) {
+                <p class="notification-empty">Cargando notificaciones...</p>
+              } @else if (pendingAssignments.length === 0) {
+                <p class="notification-empty">No tienes tareas pendientes asignadas.</p>
+              } @else {
+                <div class="notification-list">
+                  @for (assignment of pendingAssignments; track assignment.orderId) {
+                    <button
+                      type="button"
+                      class="notification-item"
+                      (click)="openAssignment(assignment.orderId)"
+                    >
+                      <div class="notification-item-title">{{ assignment.title }}</div>
+                      <div class="notification-item-detail">{{ assignment.orderCode }} · {{ assignment.detail }}</div>
+                      <div class="notification-item-status">
+                        {{ assignment.acceptanceStatus === 'PENDING' ? 'Por aceptar' : 'En proceso' }}
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         <div class="admin-navbar-user">
           <span class="admin-navbar-user-name">
             {{ currentUser?.firstName }} {{ currentUser?.lastName }}

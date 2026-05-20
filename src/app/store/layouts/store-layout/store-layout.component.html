@@ -7,6 +7,16 @@
         <a routerLink="/marketplace/cart" routerLinkActive="active-link">Carrito</a>
         <a routerLink="/marketplace/track-order" routerLinkActive="active-link">Seguimiento</a>
       </nav>
+      @if (marketplaceUser(); as user) {
+        <div class="mk-account-pill">
+          <a class="account-name" routerLink="/marketplace/account">Hola, {{ user.firstName }}</a>
+          <button type="button" class="account-logout" (click)="logoutMarketplace()">
+            Salir
+          </button>
+        </div>
+      } @else {
+        <a class="mk-auth-link" routerLink="/marketplace/auth">Ingresar / Registrarme</a>
+      }
       <button
         type="button"
         class="theme-toggle"

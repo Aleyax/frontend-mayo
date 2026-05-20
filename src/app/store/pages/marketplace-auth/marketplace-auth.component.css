@@ -1,0 +1,107 @@
+:host {
+  --mka-border: color-mix(in oklab, var(--color-base-content, #0f172a) 14%, transparent);
+  --mka-surface: var(--color-base-100, #ffffff);
+  --mka-surface-soft: color-mix(in oklab, var(--mka-surface) 84%, var(--mka-text) 16%);
+  --mka-text: var(--color-base-content, #0f172a);
+  --mka-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
+  --mka-accent: #ff6a00;
+}
+
+.mk-auth-page {
+  min-height: calc(100vh - 3rem);
+  background: var(--color-base-200, #f4f7fb);
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  border: 1px solid var(--mka-border);
+  border-radius: 12px;
+  background: var(--mka-surface);
+  padding: 1rem;
+}
+
+.back-link {
+  color: var(--mka-accent);
+  text-decoration: none;
+}
+
+.auth-card h1 {
+  margin: 0.35rem 0 0.2rem;
+  color: var(--mka-text);
+}
+
+.auth-card p {
+  margin: 0;
+  color: var(--mka-muted);
+}
+
+.mode-switch {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.mode-switch button {
+  border: 1px solid var(--mka-border);
+  border-radius: 999px;
+  background: var(--mka-surface-soft);
+  color: var(--mka-text);
+  padding: 0.35rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-switch button.active {
+  border-color: color-mix(in oklab, var(--mka-accent) 58%, var(--mka-border));
+  background: color-mix(in oklab, var(--mka-accent) 14%, var(--mka-surface));
+  color: color-mix(in oklab, var(--mka-accent) 72%, var(--mka-text));
+}
+
+.auth-form {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--mka-text);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.auth-form input {
+  border: 1px solid var(--mka-border);
+  border-radius: 8px;
+  background: var(--mka-surface-soft);
+  color: var(--mka-text);
+  padding: 0.5rem 0.6rem;
+}
+
+.error-msg {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.submit-btn {
+  margin-top: 0.35rem;
+  border: 0;
+  border-radius: 9px;
+  background: var(--mka-accent);
+  color: #fff;
+  padding: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+

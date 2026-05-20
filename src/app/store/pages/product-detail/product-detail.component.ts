@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -25,6 +25,9 @@ export class ProductDetailComponent implements OnInit {
   private readonly addToCartMessage = signal('');
   private readonly selectedImageOverride = signal('');
   private readonly quantityVersion = signal(0);
+  readonly drawerOpen = signal(false);
+  readonly selectedColorName = signal<string | null>(null);
+  readonly selectedSizeName = signal<string | null>(null);
   private readonly productResource = rxResource<MarketplaceCatalogProduct | null, number | undefined>({
     params: () => this.productId() ?? undefined,
     stream: ({ params }) => {
@@ -42,14 +45,96 @@ export class ProductDetailComponent implements OnInit {
     const resourceError = this.productResource.error() as { message?: string } | undefined;
     return resourceError ? (resourceError.message || 'No pudimos cargar este producto.') : '';
   });
+  readonly selectedVariant = computed<MarketplaceProductVariant | null>(() => {
+    const product = this.product();
+    if (!product) return null;
+
+    const selectedColor = this.selectedColorName();
+    const selectedSize = this.selectedSizeName();
+
+    return (product.variants || []).find((variant) => {
+      if (selectedColor && this.getColorName(variant) !== selectedColor) return false;
+      if (selectedSize && this.getSizeName(variant) !== selectedSize) return false;
+      return true;
+    }) || null;
+  });
   readonly selectedImageUrl = computed(() => {
     const product = this.product();
     if (!product) return '';
     const manualSelection = this.selectedImageOverride();
     if (manualSelection) return manualSelection;
+
+    const selectedVariant = this.selectedVariant();
+    if (selectedVariant?.imageUrl) return selectedVariant.imageUrl;
+
+    const selectedColor = this.selectedColorName();
+    if (selectedColor) {
+      const colorImage = (product.variants || []).find(
+        (variant) => this.getColorName(variant) === selectedColor && !!variant.imageUrl
+      )?.imageUrl;
+      if (colorImage) return colorImage;
+    }
+
     return product.imageUrl || product.images?.[0]?.url || '';
   });
   readonly footerMessage = computed(() => this.addToCartMessage());
+  readonly colorOptions = computed<Array<{ name: string; hex?: string | null }>>(() => {
+    const product = this.product();
+    if (!product) return [];
+
+    if (Array.isArray(product.colors) && product.colors.length > 0) {
+      return product.colors.map((color) => ({
+        name: String(color?.name || 'Unico'),
+        hex: color?.hex ?? null,
+      }));
+    }
+
+    const map = new Map<string, { name: string; hex?: string | null }>();
+    for (const variant of product.variants || []) {
+      const colorName = this.getColorName(variant);
+      if (!map.has(colorName)) {
+        map.set(colorName, {
+          name: colorName,
+          hex: variant.color?.hex ?? null,
+        });
+      }
+    }
+    return Array.from(map.values());
+  });
+
+  readonly sizeOptions = computed<string[]>(() => {
+    const product = this.product();
+    if (!product) return [];
+
+    const selectedColor = this.selectedColorName();
+    const variants = (product.variants || []).filter((variant) => {
+      if (!selectedColor) return true;
+      return this.getColorName(variant) === selectedColor;
+    });
+
+    const names = new Set<string>();
+    variants.forEach((variant) => names.add(this.getSizeName(variant)));
+
+    return Array.from(names.values()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  });
+
+  readonly drawerVariants = computed<MarketplaceProductVariant[]>(() => {
+    const product = this.product();
+    if (!product) return [];
+
+    const selectedColor = this.selectedColorName();
+
+    return (product.variants || [])
+      .filter((variant) => {
+        if (selectedColor && this.getColorName(variant) !== selectedColor) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const colorSort = this.getColorName(a).localeCompare(this.getColorName(b));
+        if (colorSort !== 0) return colorSort;
+        return this.getSizeName(a).localeCompare(this.getSizeName(b), undefined, { numeric: true });
+      });
+  });
 
   readonly quantityByVariant = new Map<number, number>();
 
@@ -68,11 +153,46 @@ export class ProductDetailComponent implements OnInit {
     }, 0);
   });
 
+  readonly drawerSubtotal = computed(() => {
+    this.quantityVersion();
+    const product = this.product();
+    if (!product) return 0;
+    return (product.variants || []).reduce((sum, variant) => {
+      const qty = Number(this.quantityByVariant.get(variant.id) || 0);
+      return sum + (qty * Number(variant.price || 0));
+    }, 0);
+  });
+
+  constructor() {
+    effect(() => {
+      const product = this.product();
+      if (!product) return;
+
+      const colors = this.colorOptions();
+      if (!this.selectedColorName() && colors.length > 0) {
+        this.selectedColorName.set(colors[0].name);
+      }
+
+      const sizes = this.sizeOptions();
+      const currentSize = this.selectedSizeName();
+      if (sizes.length === 0) {
+        if (currentSize) this.selectedSizeName.set(null);
+      } else if (!currentSize || !sizes.includes(currentSize)) {
+        this.selectedSizeName.set(sizes[0]);
+      }
+
+      this.syncImageForCurrentSelection();
+    });
+  }
+
   ngOnInit() {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
       this.addToCartMessage.set('');
       this.selectedImageOverride.set('');
+      this.selectedColorName.set(null);
+      this.selectedSizeName.set(null);
+      this.drawerOpen.set(false);
       this.quantityByVariant.clear();
       this.bumpQuantityVersion();
 
@@ -86,57 +206,8 @@ export class ProductDetailComponent implements OnInit {
     });
   }
 
-  get colorGroups(): Array<{ colorName: string; colorHex?: string | null; variants: MarketplaceProductVariant[] }> {
-    const product = this.product();
-    if (!product) return [];
-    const groups = new Map<string, { colorName: string; colorHex?: string | null; variants: MarketplaceProductVariant[] }>();
-    product.variants.forEach((variant) => {
-      const colorName = variant.color?.name || 'Unico';
-      const current = groups.get(colorName) || {
-        colorName,
-        colorHex: variant.color?.hex || null,
-        variants: [],
-      };
-      current.variants.push(variant);
-      groups.set(colorName, current);
-    });
-
-    return Array.from(groups.values()).map((group) => ({
-      ...group,
-      variants: [...group.variants].sort((a, b) =>
-        (a.size?.name || 'Unica').localeCompare(b.size?.name || 'Unica'),
-      ),
-    }));
-  }
-
-  get sizeColumns(): string[] {
-    const product = this.product();
-    if (!product) return [];
-    const unique = new Set<string>();
-    product.variants.forEach((variant) => unique.add(variant.size?.name || 'Unica'));
-    return Array.from(unique.values());
-  }
-
-  get colorRows(): string[] {
-    const product = this.product();
-    if (!product) return [];
-    const unique = new Set<string>();
-    product.variants.forEach((variant) => unique.add(variant.color?.name || 'Unico'));
-    return Array.from(unique.values());
-  }
-
   get cartUnits() {
     return this.cartService.totalUnits();
-  }
-
-  getVariantByMatrix(colorName: string, sizeName: string): MarketplaceProductVariant | undefined {
-    const product = this.product();
-    if (!product) return undefined;
-    return product.variants.find((variant) => {
-      const variantColor = variant.color?.name || 'Unico';
-      const variantSize = variant.size?.name || 'Unica';
-      return variantColor === colorName && variantSize === sizeName;
-    });
   }
 
   getVariantQty(variantId: number): number {
@@ -155,6 +226,38 @@ export class ProductDetailComponent implements OnInit {
 
   decrementVariant(variantId: number) {
     this.setVariantQty(variantId, this.getVariantQty(variantId) - 1);
+  }
+
+  selectColor(colorName: string, openDrawer = true) {
+    this.selectedColorName.set(colorName);
+    const sizes = this.sizeOptions();
+    if (sizes.length > 0 && !sizes.includes(this.selectedSizeName() || '')) {
+      this.selectedSizeName.set(sizes[0]);
+    }
+    this.syncImageForCurrentSelection();
+    if (openDrawer) this.openVariantDrawer();
+  }
+
+  selectSize(sizeName: string, openDrawer = true) {
+    this.selectedSizeName.set(sizeName);
+    this.syncImageForCurrentSelection();
+    if (openDrawer) this.openVariantDrawer();
+  }
+
+  openVariantDrawer() {
+    this.drawerOpen.set(true);
+    this.addToCartMessage.set('');
+  }
+
+  closeVariantDrawer() {
+    this.drawerOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePressed() {
+    if (this.drawerOpen()) {
+      this.closeVariantDrawer();
+    }
   }
 
   addSelectionToCart() {
@@ -179,6 +282,93 @@ export class ProductDetailComponent implements OnInit {
 
   selectImage(imageUrl: string) {
     this.selectedImageOverride.set(imageUrl);
+  }
+
+  getColorName(variant: MarketplaceProductVariant): string {
+    return String(variant?.color?.name || 'Unico');
+  }
+
+  getSizeName(variant: MarketplaceProductVariant): string {
+    return String(variant?.size?.name || 'Unica');
+  }
+
+  getColorPreviewImage(colorName: string): string {
+    const product = this.product();
+    if (!product) return '';
+    const match = (product.variants || []).find(
+      (variant) => this.getColorName(variant) === colorName && !!variant.imageUrl
+    );
+    return match?.imageUrl || '';
+  }
+
+  isDrawerVariantSelected(variant: MarketplaceProductVariant): boolean {
+    return this.selectedSizeName() === this.getSizeName(variant);
+  }
+
+  getTierPrice(tier: 'starter' | 'business' | 'bulk'): number {
+    const product = this.product();
+    if (!product) return 0;
+
+    const min = Number(product.minPrice || 0);
+    const max = Number(product.maxPrice || min);
+
+    if (tier === 'starter') {
+      return max;
+    }
+
+    if (tier === 'business') {
+      return Number(((max + min) / 2).toFixed(2));
+    }
+
+    return min;
+  }
+
+  isProductAvailabilityWarning(product: MarketplaceCatalogProduct): boolean {
+    const totalAvailableStock = Number(product?.totalAvailableStock || 0);
+    return !product?.hasStock || totalAvailableStock < 3;
+  }
+
+  getProductAvailabilityLabel(product: MarketplaceCatalogProduct): string {
+    const totalAvailableStock = Number(product?.totalAvailableStock || 0);
+    if (!product?.hasStock || totalAvailableStock <= 0) {
+      return 'Puedes pedir bajo confirmacion de disponibilidad.';
+    }
+    if (totalAvailableStock < 3) {
+      return 'Por agotarse';
+    }
+    return 'Disponible';
+  }
+
+  getVariantAvailabilityLabel(variant: MarketplaceProductVariant): string {
+    const availableStock = Number(variant?.availableStock || 0);
+    if (availableStock <= 0) {
+      return 'Sujeto a disponibilidad';
+    }
+    if (availableStock < 3) {
+      return 'Por agotarse';
+    }
+    return 'Disponible';
+  }
+
+  private syncImageForCurrentSelection() {
+    const product = this.product();
+    if (!product) return;
+
+    const selectedColor = this.selectedColorName();
+    const selectedSize = this.selectedSizeName();
+
+    const match = (product.variants || []).find((variant) => {
+      if (selectedColor && this.getColorName(variant) !== selectedColor) return false;
+      if (selectedSize && this.getSizeName(variant) !== selectedSize) return false;
+      return !!variant.imageUrl;
+    });
+
+    if (match?.imageUrl) {
+      this.selectedImageOverride.set(match.imageUrl);
+      return;
+    }
+
+    this.selectedImageOverride.set('');
   }
 
   private bumpQuantityVersion() {

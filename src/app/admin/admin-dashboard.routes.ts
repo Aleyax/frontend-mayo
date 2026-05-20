@@ -76,6 +76,12 @@ export const adminDashboardRoute: Routes = [
         loadComponent: () => import('./pages/role-management-page/role-management-page.component').then(m => m.RoleManagementPageComponent)
       },
       {
+        path: 'settings',
+        canActivate: [PermissionGuard],
+        data: { permission: 'settings.manage' },
+        loadComponent: () => import('./pages/system-settings-page/system-settings-page.component').then(m => m.SystemSettingsPageComponent)
+      },
+      {
         path: 'orders',
         canActivate: [PermissionGuard],
         data: { permission: 'orders.view' },

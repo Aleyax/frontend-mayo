@@ -129,4 +129,20 @@ export class HomeComponent {
   toggleMobileFilters() {
     this.showMobileFilters = !this.showMobileFilters;
   }
+
+  isProductAvailabilityWarning(product: MarketplaceCatalogProduct): boolean {
+    const totalAvailableStock = Number(product?.totalAvailableStock || 0);
+    return !product?.hasStock || totalAvailableStock < 3;
+  }
+
+  getProductAvailabilityLabel(product: MarketplaceCatalogProduct): string {
+    const totalAvailableStock = Number(product?.totalAvailableStock || 0);
+    if (!product?.hasStock || totalAvailableStock <= 0) {
+      return 'Pedido sujeto a disponibilidad';
+    }
+    if (totalAvailableStock < 3) {
+      return 'Por agotarse';
+    }
+    return 'Disponible';
+  }
 }

@@ -19,7 +19,9 @@ export interface MarketplaceCartItem {
 })
 export class MarketplaceCartService {
   private readonly storageKey = 'marketplace_wholesale_cart_v1';
+  private readonly paymentMethodStorageKey = 'marketplace_wholesale_checkout_payment_method_id_v1';
   readonly items = signal<MarketplaceCartItem[]>(this.loadInitialItems());
+  readonly selectedPaymentMethodId = signal<number | null>(this.loadInitialPaymentMethodId());
 
   readonly totalUnits = computed(() =>
     this.items().reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -101,6 +103,18 @@ export class MarketplaceCartService {
     this.persist();
   }
 
+  setSelectedPaymentMethodId(paymentMethodId: number | null) {
+    const normalizedId = Number(paymentMethodId);
+    if (!Number.isInteger(normalizedId) || normalizedId < 1) {
+      this.selectedPaymentMethodId.set(null);
+      this.persistPaymentMethod();
+      return;
+    }
+
+    this.selectedPaymentMethodId.set(normalizedId);
+    this.persistPaymentMethod();
+  }
+
   private loadInitialItems(): MarketplaceCartItem[] {
     if (typeof window === 'undefined') return [];
     try {
@@ -121,6 +135,22 @@ export class MarketplaceCartService {
     }
   }
 
+  private loadInitialPaymentMethodId(): number | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(this.paymentMethodStorageKey);
+      if (!raw) return null;
+
+      const parsed = Number(raw);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
   private persist() {
     if (typeof window === 'undefined') return;
     try {
@@ -129,5 +159,19 @@ export class MarketplaceCartService {
       // noop
     }
   }
-}
 
+  private persistPaymentMethod() {
+    if (typeof window === 'undefined') return;
+    try {
+      const value = this.selectedPaymentMethodId();
+      if (!value || value < 1) {
+        window.localStorage.removeItem(this.paymentMethodStorageKey);
+        return;
+      }
+
+      window.localStorage.setItem(this.paymentMethodStorageKey, String(value));
+    } catch {
+      // noop
+    }
+  }
+}

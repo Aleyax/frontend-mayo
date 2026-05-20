@@ -41,17 +41,23 @@
 .track-form {
   margin-top: 0.8rem;
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 0.55rem;
   align-items: end;
 }
 
-.track-form label {
+.track-form .field {
   display: grid;
   gap: 0.3rem;
   font-size: 0.8rem;
   color: var(--mkt-text);
   font-weight: 700;
+}
+
+.track-form .code-field,
+.track-form .phone-field,
+.track-form .email-field {
+  grid-column: span 4;
 }
 
 .track-form input {
@@ -73,6 +79,13 @@
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--mkt-accent) 20%, transparent);
 }
 
+.track-form .actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .track-form button {
   border: 0;
   border-radius: 9px;
@@ -81,16 +94,81 @@
   font-weight: 700;
   padding: 0.56rem 0.88rem;
   cursor: pointer;
+  min-width: 10rem;
 }
 
 .track-form button:disabled {
   opacity: 0.7;
 }
 
+.track-form .code-search-btn {
+  border: 1px solid var(--mkt-border);
+  background: var(--mkt-surface);
+  color: var(--mkt-text);
+}
+
 .error-msg {
   margin-top: 0.65rem;
   color: #b91c1c;
   font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.orders-list-card {
+  margin-top: 0.85rem;
+  border: 1px solid var(--mkt-border);
+  border-radius: 10px;
+  background: var(--mkt-surface-soft);
+  padding: 0.75rem;
+}
+
+.orders-list-card h2 {
+  margin: 0 0 0.5rem;
+  color: var(--mkt-text);
+}
+
+.orders-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.order-row {
+  width: 100%;
+  border: 1px solid var(--mkt-border);
+  border-radius: 8px;
+  background: var(--mkt-surface);
+  padding: 0.55rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.order-row:hover {
+  border-color: color-mix(in oklab, var(--mkt-accent) 45%, var(--mkt-border));
+}
+
+.order-main strong {
+  color: var(--mkt-text);
+}
+
+.order-main p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--mkt-muted);
+}
+
+.order-meta {
+  display: grid;
+  gap: 0.12rem;
+  text-align: right;
+  color: var(--mkt-muted);
+  font-size: 0.75rem;
+}
+
+.order-meta .pending {
+  color: #92400e;
   font-weight: 700;
 }
 
@@ -102,19 +180,76 @@
   padding: 0.75rem;
 }
 
-.result-card h2 {
-  margin: 0;
-  color: var(--mkt-text);
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.result-card .status {
-  margin-top: 0.2rem;
-  color: var(--mkt-accent);
+.back-to-list-btn {
+  border: 1px solid var(--mkt-border);
+  border-radius: 9px;
+  background: var(--mkt-surface);
+  color: var(--mkt-text);
+  padding: 0.45rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.detail-loading {
+  margin-top: 0.7rem;
+  color: var(--mkt-muted);
   font-weight: 700;
 }
 
-.result-card .message {
+.detail-summary-grid {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.detail-summary-grid article {
+  border: 1px solid var(--mkt-border);
+  border-radius: 8px;
+  background: var(--mkt-surface-soft);
+  padding: 0.45rem 0.55rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.detail-summary-grid span {
+  font-size: 0.74rem;
+  color: var(--mkt-muted);
+}
+
+.detail-summary-grid strong {
+  color: var(--mkt-text);
+}
+
+.result-card h2 {
+  margin: 0 0 0.3rem;
+  color: var(--mkt-text);
+}
+
+.result-card .order-status {
+  margin: 0;
+  color: var(--mkt-accent);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.result-card .order-message {
   margin-top: 0.25rem;
+  color: var(--mkt-muted);
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.result-card .order-message + .order-message {
+  margin-top: 0.2rem;
 }
 
 .items-list {
@@ -158,6 +293,42 @@
 @media (max-width: 720px) {
   .track-form {
     grid-template-columns: 1fr;
+  }
+
+  .track-form .code-field,
+  .track-form .phone-field,
+  .track-form .email-field {
+    grid-column: span 1;
+  }
+
+  .track-form .actions {
+    grid-column: span 1;
+    flex-direction: column;
+  }
+
+  .track-form button {
+    width: 100%;
+  }
+
+  .order-row {
+    flex-direction: column;
+  }
+
+  .detail-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .back-to-list-btn {
+    width: 100%;
+  }
+
+  .detail-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .order-meta {
+    text-align: left;
   }
 
   .item-row {

@@ -10,6 +10,7 @@ export type OrderStatus =
   | 'PREPARING'
   | 'READY'
   | 'DELIVERED'
+  | 'RETURN_PENDING'
   | 'CANCELLED'
   | 'WAITING_STOCK';
 
@@ -94,6 +95,19 @@ export class OrderService {
       roleType,
       userId
     });
+  }
+
+  // Delegar responsabilidad de devolucion
+  delegateReturnResponsibility(id: number, userId: number, note?: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/return-responsibility/delegate`, {
+      userId,
+      note
+    });
+  }
+
+  // Aceptar responsabilidad de devolucion
+  acceptReturnResponsibility(id: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/return-responsibility/accept`, {});
   }
 
   // Obtener stock remoto

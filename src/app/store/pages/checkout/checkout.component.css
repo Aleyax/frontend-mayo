@@ -132,11 +132,76 @@
   color: var(--mkx-muted);
 }
 
+.payment-method-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.payment-method-pill {
+  border: 1px solid var(--mkx-border);
+  border-radius: 999px;
+  background: var(--mkx-surface-soft);
+  color: var(--mkx-text);
+  padding: 0.34rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-method-pill.active {
+  border-color: color-mix(in oklab, var(--mkx-primary) 55%, var(--mkx-border));
+  background: color-mix(in oklab, var(--mkx-primary) 16%, var(--mkx-surface));
+  color: color-mix(in oklab, var(--mkx-primary) 72%, var(--mkx-text));
+}
+
 .error-msg {
   margin: 0.5rem 0 0;
   color: #b91c1c;
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.guest-register-prompt {
+  margin-top: 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--mkx-primary) 30%, var(--mkx-border));
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--mkx-primary) 10%, var(--mkx-surface));
+  padding: 0.7rem;
+}
+
+.guest-register-prompt p {
+  margin: 0;
+  color: var(--mkx-text);
+  font-size: 0.83rem;
+  line-height: 1.3;
+}
+
+.guest-register-actions {
+  margin-top: 0.6rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.guest-register-actions button {
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guest-register-actions .btn-register {
+  border: 1px solid color-mix(in oklab, var(--mkx-primary) 50%, var(--mkx-border));
+  background: var(--mkx-primary);
+  color: #ffffff;
+}
+
+.guest-register-actions .btn-guest {
+  border: 1px solid var(--mkx-border);
+  background: var(--mkx-surface);
+  color: var(--mkx-text);
 }
 
 .confirm-btn {

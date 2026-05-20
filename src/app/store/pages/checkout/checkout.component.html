@@ -47,15 +47,6 @@
 
           @if (loadingStores) {
             <p class="small-muted">Cargando tiendas...</p>
-          } @else {
-            <label>
-              Tienda origen *
-              <select [(ngModel)]="sourceStoreId" name="sourceStoreId">
-                @for (store of stores; track store.id) {
-                  <option [ngValue]="store.id">{{ store.name }} ({{ store.code }})</option>
-                }
-              </select>
-            </label>
           }
 
           @if (deliveryType === 'PICKUP') {
@@ -63,7 +54,7 @@
               Tienda de recojo *
               <select [(ngModel)]="pickupStoreId" name="pickupStoreId">
                 @for (store of stores; track store.id) {
-                  <option [ngValue]="store.id">{{ store.name }} ({{ store.code }})</option>
+                  <option [ngValue]="store.id">{{ store.name }}</option>
                 }
               </select>
             </label>
@@ -79,6 +70,32 @@
           }
         </section>
 
+        @if (loadingPaymentMethods) {
+          <p class="small-muted">Cargando metodos de pago...</p>
+        }
+
+        @if (paymentMethodsEnabled) {
+          <section>
+            <h2>Metodo de pago</h2>
+            @if (paymentMethods.length === 0) {
+              <p class="small-muted">No hay metodos de pago disponibles por ahora.</p>
+            } @else {
+              <div class="payment-method-list">
+                @for (method of paymentMethods; track method.id) {
+                  <button
+                    type="button"
+                    class="payment-method-pill"
+                    [class.active]="isPaymentMethodSelected(method.id)"
+                    (click)="selectPaymentMethod(method.id)"
+                  >
+                    {{ method.name }}
+                  </button>
+                }
+              </div>
+            }
+          </section>
+        }
+
         <section>
           <h2>Observaciones</h2>
           <label>
@@ -86,6 +103,22 @@
             <textarea rows="3" [(ngModel)]="note" name="note"></textarea>
           </label>
         </section>
+
+        @if (showGuestRegistrationPrompt) {
+          <div class="guest-register-prompt">
+            <p>
+              Aun no inicias sesion en marketplace. Te sugerimos registrarte para guardar tu historial y ver solo tus pedidos.
+            </p>
+            <div class="guest-register-actions">
+              <button type="button" class="btn-register" (click)="goToRegister()">
+                Si, registrarme
+              </button>
+              <button type="button" class="btn-guest" (click)="continueAsGuest()">
+                No, continuar compra
+              </button>
+            </div>
+          </div>
+        }
 
         @if (errorMessage) {
           <p class="error-msg">{{ errorMessage }}</p>

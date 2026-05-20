@@ -1,49 +1,139 @@
 <section class="mk-track-page">
   <article class="track-card">
-    <a class="back-link" routerLink="/marketplace">← Volver al marketplace</a>
-    <h1>Seguimiento de pedido</h1>
-    <p>Consulta el estado de tu pedido con codigo y telefono.</p>
+    <a class="back-link" routerLink="/marketplace">Volver al marketplace</a>
+    @if (!showingDetail()) {
+      <h1>Seguimiento de pedido</h1>
+      <p>Si iniciaste sesion en marketplace, veras solo tus pedidos. Como invitado, filtra por telefono y email.</p>
 
-    <div class="track-form">
-      <label>
-        Codigo de pedido
-        <input type="text" [(ngModel)]="code" placeholder="MK-XXXXXXXX" />
-      </label>
-      <label>
-        Telefono
-        <input type="text" [(ngModel)]="phone" placeholder="999999999" />
-      </label>
-      <button type="button" (click)="track()" [disabled]="loading">
-        {{ loading ? 'Buscando...' : 'Consultar pedido' }}
-      </button>
-    </div>
-
-    @if (errorMessage) {
-      <p class="error-msg">{{ errorMessage }}</p>
-    }
-
-    @if (result; as order) {
-      <div class="result-card">
-        <h2>{{ order.code }}</h2>
-        <p class="status">{{ order.publicStatus }}</p>
-        <p class="message">{{ order.reviewMessage }}</p>
-
-        <div class="items-list">
-          @for (item of order.items; track item.productName + item.colorName + item.sizeName) {
-            <div class="item-row">
-              <div>
-                <strong>{{ item.productName }}</strong>
-                <p>{{ item.colorName }} / {{ item.sizeName }}</p>
-              </div>
-              <div class="qty">
-                <span>Solicitado: {{ item.requestedQuantity }}</span>
-                <span>Reservado: {{ item.reservedQuantity }}</span>
-                <span [class.pending]="item.pendingQuantity > 0">Pendiente: {{ item.pendingQuantity }}</span>
-              </div>
-            </div>
-          }
+      <div class="track-form">
+        <label class="field code-field">
+          Codigo de pedido (opcional)
+          <input type="text" [(ngModel)]="code" placeholder="MK-XXXXXXXX" />
+        </label>
+        <label class="field phone-field">
+          Telefono
+          <input type="text" [(ngModel)]="phone" placeholder="999999999" />
+        </label>
+        <label class="field email-field">
+          Email (opcional)
+          <input type="email" [(ngModel)]="email" placeholder="cliente@correo.com" />
+        </label>
+        <div class="actions">
+          <button type="button" (click)="viewMyOrders()" [disabled]="loadingOrders()">
+            {{ loadingOrders() ? 'Buscando...' : 'Ver mis pedidos' }}
+          </button>
+          <button
+            type="button"
+            class="code-search-btn"
+            (click)="searchByCode(true)"
+            [disabled]="loadingTrack() || !code.trim()"
+          >
+            {{ loadingTrack() ? 'Buscando...' : 'Buscar por codigo' }}
+          </button>
         </div>
       </div>
+
+      @if (errorMessage()) {
+        <p class="error-msg">{{ errorMessage() }}</p>
+      }
+
+      @if (myOrders().length > 0) {
+        <div class="orders-list-card">
+          <h2>Ultimos pedidos</h2>
+          <div class="orders-list">
+            @for (order of myOrders(); track order.code) {
+              <button type="button" class="order-row" (click)="openOrder(order.code)">
+                <div class="order-main">
+                  <strong>{{ order.code }}</strong>
+                  <p>{{ order.publicStatus }}</p>
+                </div>
+                <div class="order-meta">
+                  <span>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  <span>Total: S/ {{ order.totals.total | number: '1.2-2' }}</span>
+                  <span [class.pending]="order.hasPending">Pendiente: {{ order.pendingUnits }}</span>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="detail-head">
+        <h1>Detalle de pedido</h1>
+        <button type="button" class="back-to-list-btn" (click)="closeOrderDetail()">
+          Volver a pedidos
+        </button>
+      </div>
+
+      @if (loadingTrack() && !result()) {
+        <p class="detail-loading">Cargando detalle del pedido...</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="error-msg">{{ errorMessage() }}</p>
+      }
+
+      @if (result(); as order) {
+        <div class="detail-summary-grid">
+          <article>
+            <span>Codigo</span>
+            <strong>{{ order.code }}</strong>
+          </article>
+          <article>
+            <span>Estado</span>
+            <strong>{{ order.publicStatus }}</strong>
+          </article>
+          <article>
+            <span>Productos</span>
+            <strong>{{ detailSummary().products }}</strong>
+          </article>
+          <article>
+            <span>Solicitado</span>
+            <strong>{{ detailSummary().requestedUnits }}</strong>
+          </article>
+          <article>
+            <span>Reservado</span>
+            <strong>{{ detailSummary().reservedUnits }}</strong>
+          </article>
+          <article>
+            <span>Pendiente</span>
+            <strong>{{ detailSummary().pendingUnits }}</strong>
+          </article>
+        </div>
+
+        <div class="result-card">
+          <h2>{{ order.code }}</h2>
+          <p class="order-status">{{ order.publicStatus }}</p>
+          <p class="order-message">Fecha: {{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+          @if (order.clientName || order.clientPhone) {
+            <p class="order-message">Cliente: {{ order.clientName || 'Sin nombre' }} - {{ order.clientPhone || 'Sin telefono' }}</p>
+          }
+          @if (order.totals; as totals) {
+            <p class="order-message">Total pedido: S/ {{ totals.total | number: '1.2-2' }}</p>
+          }
+          <p class="order-message">{{ order.reviewMessage }}</p>
+
+          <div class="items-list">
+            @for (item of order.items; track item.productName + item.colorName + item.sizeName) {
+              <div class="item-row">
+                <div>
+                  <strong>{{ item.productName }}</strong>
+                  <p>{{ item.colorName }} / {{ item.sizeName }}</p>
+                </div>
+                <div class="qty">
+                  <span>Solicitado: {{ item.requestedQuantity }}</span>
+                  <span>Reservado: {{ item.reservedQuantity }}</span>
+                  <span [class.pending]="item.pendingQuantity > 0">Pendiente: {{ item.pendingQuantity }}</span>
+                  @if (item.unitPrice !== undefined && item.subtotal !== undefined) {
+                    <span>Precio: S/ {{ item.unitPrice | number: '1.2-2' }}</span>
+                    <span>Subtotal: S/ {{ item.subtotal | number: '1.2-2' }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+          </div>
+        }
     }
   </article>
 </section>

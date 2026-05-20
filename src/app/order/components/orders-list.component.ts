@@ -81,6 +81,7 @@ export class OrdersListComponent implements OnInit {
     { value: 'PREPARING', label: 'Preparando' },
     { value: 'READY', label: 'Listo' },
     { value: 'DELIVERED', label: 'Entregado' },
+    { value: 'RETURN_PENDING', label: 'Pendiente devolucion' },
     { value: 'CANCELLED', label: 'Cancelado' },
     { value: 'WAITING_STOCK', label: 'Sin stock' }
   ];
@@ -103,6 +104,7 @@ export class OrdersListComponent implements OnInit {
     PREPARING: '#e67e22',
     READY: '#27ae60',
     DELIVERED: '#16a085',
+    RETURN_PENDING: '#d35400',
     CANCELLED: '#e74c3c',
     WAITING_STOCK: '#c0392b'
   };
@@ -114,6 +116,7 @@ export class OrdersListComponent implements OnInit {
     PREPARING: 'Preparando',
     READY: 'Listo',
     DELIVERED: 'Entregado',
+    RETURN_PENDING: 'Pendiente Devolucion',
     CANCELLED: 'Cancelado',
     WAITING_STOCK: 'Sin Stock'
   };

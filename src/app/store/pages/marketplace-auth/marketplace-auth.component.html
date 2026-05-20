@@ -1,0 +1,54 @@
+<section class="mk-auth-page">
+  <article class="auth-card">
+    <a class="back-link" routerLink="/marketplace">Volver al marketplace</a>
+    <h1>Cuenta marketplace</h1>
+    <p>Inicia sesion o registrate para guardar tu historial de pedidos.</p>
+
+    <div class="mode-switch">
+      <button type="button" [class.active]="mode === 'login'" (click)="switchMode('login')">
+        Iniciar sesion
+      </button>
+      <button type="button" [class.active]="mode === 'register'" (click)="switchMode('register')">
+        Registrarme
+      </button>
+    </div>
+
+    <form class="auth-form" (submit)="$event.preventDefault(); submit()">
+      @if (mode === 'register') {
+        <label>
+          Nombres
+          <input type="text" [(ngModel)]="firstName" name="firstName" />
+        </label>
+        <label>
+          Apellidos
+          <input type="text" [(ngModel)]="lastName" name="lastName" />
+        </label>
+        <label>
+          Telefono
+          <input type="text" [(ngModel)]="phone" name="phone" />
+        </label>
+        <label>
+          Direccion (opcional)
+          <input type="text" [(ngModel)]="address" name="address" />
+        </label>
+      }
+
+      <label>
+        Email
+        <input type="email" [(ngModel)]="email" name="email" />
+      </label>
+      <label>
+        Contrasena
+        <input type="password" [(ngModel)]="password" name="password" />
+      </label>
+
+      @if (errorMessage) {
+        <p class="error-msg">{{ errorMessage }}</p>
+      }
+
+      <button type="submit" class="submit-btn" [disabled]="loading">
+        {{ loading ? 'Procesando...' : (mode === 'login' ? 'Entrar' : 'Crear cuenta') }}
+      </button>
+    </form>
+  </article>
+</section>
