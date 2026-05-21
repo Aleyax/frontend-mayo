@@ -1,6 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { computed, Injectable, inject, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MarketplaceAuthUser } from '../interfaces/marketplace.interface';
 
@@ -18,8 +19,15 @@ export class MarketplaceAuthService {
 
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/public/auth`;
-  private readonly currentUserSubject = new BehaviorSubject<MarketplaceAuthUser | null>(this.loadUserFromStorage());
-  readonly currentUser$ = this.currentUserSubject.asObservable();
+  private readonly tokenState = signal<string | null>(this.loadTokenFromStorage());
+  private readonly currentUserState = signal<MarketplaceAuthUser | null>(this.loadUserFromStorage());
+  readonly token = this.tokenState.asReadonly();
+  readonly currentUser = this.currentUserState.asReadonly();
+  readonly currentUser$ = toObservable(this.currentUser);
+  readonly authenticated = computed(() => {
+    const token = this.token();
+    return !!token && !this.isTokenExpired(token);
+  });
 
   register(payload: {
     firstName: string;
@@ -48,7 +56,7 @@ export class MarketplaceAuthService {
       tap((user) => {
         if (user) {
           this.persistUser(user);
-          this.currentUserSubject.next(user);
+          this.currentUserState.set(user);
         }
       }),
     );
@@ -67,7 +75,7 @@ export class MarketplaceAuthService {
       tap((user) => {
         if (user) {
           this.persistUser(user);
-          this.currentUserSubject.next(user);
+          this.currentUserState.set(user);
         }
       }),
     );
@@ -79,7 +87,7 @@ export class MarketplaceAuthService {
 
   isAuthenticated(): boolean {
     const token = this.getToken();
-    if (!token || this.isTokenExpired(token)) {
+    if (!token) {
       this.clearSession();
       return false;
     }
@@ -87,11 +95,21 @@ export class MarketplaceAuthService {
   }
 
   getCurrentUser(): MarketplaceAuthUser | null {
-    return this.currentUserSubject.value;
+    return this.currentUser();
   }
 
   getToken(): string | null {
-    return localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
+    const token = this.tokenState() ?? localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
+    if (!token || this.isTokenExpired(token)) {
+      this.clearSession();
+      return null;
+    }
+
+    if (!this.tokenState()) {
+      this.tokenState.set(token);
+    }
+
+    return token;
   }
 
   getAuthHeaders(): HttpHeaders {
@@ -107,7 +125,8 @@ export class MarketplaceAuthService {
     }
     localStorage.setItem(MarketplaceAuthService.TOKEN_KEY, token);
     this.persistUser(user);
-    this.currentUserSubject.next(user);
+    this.tokenState.set(token);
+    this.currentUserState.set(user);
   }
 
   private persistUser(user: MarketplaceAuthUser) {
@@ -116,7 +135,8 @@ export class MarketplaceAuthService {
 
   private clearSession() {
     this.removeStoredSession();
-    this.currentUserSubject.next(null);
+    this.tokenState.set(null);
+    this.currentUserState.set(null);
   }
 
   private loadUserFromStorage(): MarketplaceAuthUser | null {
@@ -147,6 +167,20 @@ export class MarketplaceAuthService {
   private removeStoredSession() {
     localStorage.removeItem(MarketplaceAuthService.TOKEN_KEY);
     localStorage.removeItem(MarketplaceAuthService.USER_KEY);
+  }
+
+  private loadTokenFromStorage(): string | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const token = localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
+    if (!token || this.isTokenExpired(token)) {
+      this.removeStoredSession();
+      return null;
+    }
+
+    return token;
   }
 
   private parseToken(token: string): any | null {

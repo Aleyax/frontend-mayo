@@ -1,0 +1,110 @@
+<div class="flex flex-col gap-6">
+  <section class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <p class="text-sm text-gray-500">Inventario</p>
+      <h1 class="text-3xl font-bold">Trazabilidad de reservas</h1>
+      <p class="text-sm text-gray-500">Seguimiento por pedido de stock reservado, liberado o consumido.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a routerLink="/admin/inventory" class="btn btn-outline btn-sm">Volver a inventario</a>
+      <a routerLink="/admin/inventory/movements" class="btn btn-outline btn-sm">Ir a movimientos</a>
+      <button class="btn btn-outline btn-sm" type="button" (click)="refresh()">Actualizar</button>
+    </div>
+  </section>
+
+  <section class="rounded-box border border-base-300 bg-base-200 p-4">
+    <div class="grid gap-4 lg:grid-cols-[2fr_1fr_auto]">
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Buscar reserva</span>
+        <input
+          type="text"
+          class="input w-full"
+          [value]="searchParam()"
+          (input)="setSearchParam($any($event.target).value)"
+          placeholder="Pedido, SKU, producto, tienda o usuario"
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Estado</span>
+        <select class="select w-full" [value]="statusFilter()" (change)="setStatusFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="ACTIVE">Activa</option>
+          <option value="RELEASED">Liberada</option>
+          <option value="COMPLETED">Completada</option>
+        </select>
+      </label>
+      <div class="flex items-end">
+        @if (inventoryIdFilter()) {
+          <button class="btn btn-ghost btn-sm" type="button" (click)="clearInventoryFilter()">Quitar filtro de variante</button>
+        }
+      </div>
+    </div>
+
+    <div class="mt-3 text-sm text-gray-600">
+      Mostrando <strong>{{ filteredCount }}</strong> de <strong>{{ totalCount }}</strong> reservas.
+      @if (inventoryIdFilter()) {
+        <span class="ml-1">Filtro activo por inventario #{{ inventoryIdFilter() }}.</span>
+      }
+    </div>
+  </section>
+
+  <section class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table table-zebra w-full">
+      <thead class="bg-base-200 text-base-content">
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Estado reserva</th>
+          <th>Variante</th>
+          <th>Tienda</th>
+          <th>Cantidad</th>
+          <th>Pedido</th>
+          <th>Estado pedido</th>
+          <th>Reservado por</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="10" class="py-8 text-center text-sm text-gray-500">Cargando trazabilidad...</td>
+          </tr>
+        } @else if (filteredReservations().length === 0) {
+          <tr>
+            <td colspan="10" class="py-8 text-center text-sm text-gray-500">No hay reservas para los filtros seleccionados.</td>
+          </tr>
+        } @else {
+          @for (reservation of filteredReservations(); track reservation.id) {
+            <tr>
+              <td>{{ reservation.id }}</td>
+              <td>{{ reservation.createdAt | date:'short' }}</td>
+              <td>{{ getReservationStatusLabel(reservation.status) }}</td>
+              <td>{{ getReservationItemSummary(reservation) }}</td>
+              <td>{{ getReservationStoreSummary(reservation) }}</td>
+              <td>{{ reservation.quantity }}</td>
+              <td>{{ reservation.order?.code || '-' }}</td>
+              <td>{{ reservation.order?.status || '-' }}</td>
+              <td>
+                {{
+                  reservation.reservedBy
+                    ? reservation.reservedBy.firstName + ' ' + reservation.reservedBy.lastName
+                    : '-'
+                }}
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  <button class="btn btn-ghost btn-xs" type="button" (click)="openMovementsForReservation(reservation)">
+                    Ver movimientos
+                  </button>
+                  <button class="btn btn-ghost btn-xs" type="button" (click)="openOrderDetail(reservation.order?.id)">
+                    Ver pedido
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+</div>

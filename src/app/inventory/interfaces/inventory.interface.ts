@@ -61,6 +61,56 @@ export interface InventoryMovement {
   };
 }
 
+export type InventoryReservationStatus = 'ACTIVE' | 'RELEASED' | 'COMPLETED';
+
+export interface InventoryReservationOrderSummary {
+  id: number;
+  code: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  sourceStoreId?: number | null;
+  fulfillmentStoreId?: number | null;
+}
+
+export interface InventoryReservation {
+  id: number;
+  quantity: number;
+  status: InventoryReservationStatus;
+  createdAt: string;
+  updatedAt: string;
+  inventoryId: number;
+  variantId: number;
+  orderId?: number | null;
+  inventory: Inventory;
+  order?: InventoryReservationOrderSummary | null;
+  reservedBy?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface InventoryReservedReconcileItem {
+  inventoryId: number;
+  storeId: number;
+  storeName: string;
+  variantId: number;
+  sku: string;
+  previousReservedStock: number;
+  targetReservedStock: number;
+  difference: number;
+  reconciled: boolean;
+}
+
+export interface InventoryReservedReconcileResult {
+  adjustedCount: number;
+  unchangedCount: number;
+  requestedInventoryCount?: number;
+  processedInventoryCount: number;
+  items: InventoryReservedReconcileItem[];
+}
+
 export type StockTransferStatus = 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
 
 export interface StockTransferItem {

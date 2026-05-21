@@ -4,8 +4,8 @@
   --mk-border: color-mix(in oklab, var(--color-base-content, #0f172a) 14%, transparent);
   --mk-text: var(--color-base-content, #0f172a);
   --mk-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
-  --mk-primary: #ff6a00;
-  --mk-primary-soft: color-mix(in oklab, #ff6a00 12%, var(--mk-surface));
+  --mk-primary: var(--color-primary, #0b63ce);
+  --mk-primary-soft: color-mix(in oklab, var(--mk-primary) 14%, var(--mk-surface));
   --mk-accent: var(--color-info, #0b63ce);
   --mk-surface-soft: color-mix(in oklab, var(--mk-surface) 82%, var(--mk-text) 18%);
 }
@@ -29,7 +29,8 @@
   border-radius: 14px;
   background: radial-gradient(
     circle at top right,
-    color-mix(in oklab, #ff6a00 14%, var(--mk-surface)) 0%,
+    color-mix(in oklab, var(--mk-primary) 18%, var(--mk-surface)) 0%,
+    color-mix(in oklab, var(--mk-accent) 8%, var(--mk-surface)) 34%,
     var(--mk-surface) 48%
   );
   padding: 1rem 1.1rem;
@@ -222,9 +223,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid #ffbc94;
+  border: 1px solid color-mix(in oklab, var(--mk-primary) 42%, var(--mk-border));
   background: var(--mk-primary-soft);
-  color: #bb4700;
+  color: var(--mk-primary);
   padding: 0.45rem 0.8rem;
   font-weight: 700;
   text-decoration: none;

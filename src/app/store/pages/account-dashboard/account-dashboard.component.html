@@ -47,20 +47,56 @@
 
     <section class="orders-card">
       <div class="orders-head">
-        <h2>Ultimos pedidos</h2>
+        <h2>Mis pedidos</h2>
         <button type="button" class="refresh-btn" (click)="reloadOrders()" [disabled]="loadingOrders()">
           {{ loadingOrders() ? 'Actualizando...' : 'Recargar' }}
         </button>
+      </div>
+
+      <div class="orders-filters">
+        <label class="filter-field filter-field-search">
+          Buscar por codigo o producto
+          <input
+            type="text"
+            [ngModel]="orderSearch()"
+            (ngModelChange)="orderSearch.set($event)"
+            placeholder="Ej. MK-2026 o Polo cuello"
+          />
+        </label>
+
+        <label class="filter-field">
+          Estado
+          <select [ngModel]="orderStatusFilter()" (ngModelChange)="orderStatusFilter.set($event)">
+            <option value="ALL">Todos</option>
+            @for (option of orderStatusOptions(); track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="filter-field">
+          Desde
+          <input type="date" [ngModel]="orderDateFrom()" (ngModelChange)="orderDateFrom.set($event)" />
+        </label>
+
+        <label class="filter-field">
+          Hasta
+          <input type="date" [ngModel]="orderDateTo()" (ngModelChange)="orderDateTo.set($event)" />
+        </label>
+
+        <button type="button" class="clear-filters-btn" (click)="clearOrderFilters()">Limpiar filtros</button>
       </div>
 
       @if (loadingOrders()) {
         <p class="muted">Cargando pedidos...</p>
       } @else if (myOrders().length === 0) {
         <p class="muted">Aun no tienes pedidos registrados.</p>
+      } @else if (filteredOrders().length === 0) {
+        <p class="muted">No hay pedidos para los filtros aplicados.</p>
       } @else {
         <div class="orders-list">
-          @for (order of myOrders(); track order.code) {
-            <button type="button" class="order-row" (click)="goToTrackOrder(order.code)">
+          @for (order of filteredOrders(); track order.code) {
+            <button type="button" class="order-row" (click)="openOrderDetail(order.code)">
               <div class="main">
                 <strong>{{ order.code }}</strong>
                 <span>{{ order.publicStatus }}</span>
@@ -71,6 +107,41 @@
                 <span [class.pending]="order.hasPending">Pendiente: {{ order.pendingUnits }}</span>
               </div>
             </button>
+          }
+        </div>
+      }
+
+      @if (showingOrderDetail()) {
+        <div class="order-detail-card">
+          <div class="detail-head">
+            <h3>Detalle del pedido</h3>
+            <button type="button" class="close-detail-btn" (click)="closeOrderDetail()">Cerrar</button>
+          </div>
+
+          @if (loadingOrderDetail() && !selectedOrderDetail()) {
+            <p class="muted">Cargando detalle...</p>
+          } @else if (selectedOrderDetail(); as detail) {
+            <div class="detail-summary">
+              <p><strong>{{ detail.code }}</strong> • {{ detail.publicStatus }}</p>
+              <p>Fecha: {{ detail.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+              <p>Total: S/ {{ detail.totals.total | number: '1.2-2' }}</p>
+            </div>
+
+            <div class="detail-items">
+              @for (item of detail.items; track item.productName + item.colorName + item.sizeName + $index) {
+                <article class="detail-item-row">
+                  <div>
+                    <strong>{{ item.productName }}</strong>
+                    <p>{{ item.colorName }} / {{ item.sizeName }}</p>
+                  </div>
+                  <div class="detail-item-meta">
+                    <span>Solicitado: {{ item.requestedQuantity }}</span>
+                    <span>Reservado: {{ item.reservedQuantity }}</span>
+                    <span [class.pending]="item.pendingQuantity > 0">Pendiente: {{ item.pendingQuantity }}</span>
+                  </div>
+                </article>
+              }
+            </div>
           }
         </div>
       }

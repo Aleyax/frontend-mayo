@@ -1,23 +1,20 @@
-import { Injectable } from '@angular/core';
-import { AuthService } from './auth.service';
+import { computed, Injectable } from '@angular/core';
+import { AuthService, AuthUser } from './auth.service';
 import { getDefaultPermissionsByRole, isWildcardPermission } from './permission-catalog';
-
-type AuthUser = {
-  role?: string | { name?: string };
-  permissions?: string[];
-};
 
 @Injectable({
   providedIn: 'root'
 })
 export class PermissionService {
-  constructor(private readonly authService: AuthService) {}
+  readonly currentPermissions = computed(() => this.resolveCurrentPermissions(this.authService.currentUser()));
+
+  constructor(private readonly authService: AuthService) { }
 
   can(permission: string): boolean {
     const normalizedPermission = this.normalizePermission(permission);
     if (!normalizedPermission) return true;
 
-    const permissions = this.getCurrentPermissions();
+    const permissions = this.currentPermissions();
     if (permissions.has('*')) return true;
 
     return permissions.has(normalizedPermission);
@@ -34,7 +31,10 @@ export class PermissionService {
   }
 
   getCurrentPermissions(): Set<string> {
-    const user = this.authService.getCurrentUser() as AuthUser | null;
+    return new Set(this.currentPermissions());
+  }
+
+  private resolveCurrentPermissions(user: AuthUser | null): Set<string> {
     if (!user) return new Set<string>();
 
     const explicitPermissions = this.normalizePermissions(user.permissions || []);
@@ -82,4 +82,3 @@ export class PermissionService {
       .toLowerCase();
   }
 }
-

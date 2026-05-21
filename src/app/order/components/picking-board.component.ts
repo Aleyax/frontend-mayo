@@ -191,7 +191,7 @@ export class PickingBoardComponent implements OnInit {
   }
 
   markItemPicked(item: any) {
-    const requested = Number(item?.requestedQuantity || 0);
+    const requested = this.getItemPickLimit(item);
     const current = Number(item?.pickedQuantity || 0);
     this.updateItemPickedQuantity(item, Math.min(requested, current + 1));
   }
@@ -202,8 +202,23 @@ export class PickingBoardComponent implements OnInit {
   }
 
   markItemComplete(item: any) {
-    const requested = Number(item?.requestedQuantity || 0);
+    const requested = this.getItemPickLimit(item);
     this.updateItemPickedQuantity(item, requested);
+  }
+
+  getItemPickLimit(item: any): number {
+    const requestedQuantity = Math.max(0, Number(item?.requestedQuantity || 0));
+    const explicitMax = Number(item?.maxPickableQuantity);
+    if (Number.isFinite(explicitMax) && explicitMax >= 0) {
+      return Math.min(requestedQuantity, explicitMax);
+    }
+
+    const reservedQuantity = Number(item?.reservedQuantity);
+    if (Number.isFinite(reservedQuantity) && reservedQuantity >= 0) {
+      return Math.min(requestedQuantity, reservedQuantity);
+    }
+
+    return requestedQuantity;
   }
 
   private updateItemPickedQuantity(item: any, nextQuantity: number) {

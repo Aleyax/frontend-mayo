@@ -1,9 +1,9 @@
-<div class="login-container">
+﻿<div class="login-container">
   <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-    <h2>Iniciar Sesión</h2>
+    <h2>Iniciar Sesion</h2>
 
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electronico</label>
       <input
         type="email"
         id="email"
@@ -17,43 +17,43 @@
             <span>El correo es obligatorio</span>
           }
           @if (loginForm.get('email')?.errors?.['email']) {
-            <span>Ingrese un correo válido</span>
+            <span>Ingrese un correo valido</span>
           }
         </div>
       }
     </div>
 
     <div class="form-group">
-      <label for="password">Contraseña</label>
+      <label for="password">Contrasena</label>
       <div class="password-container">
         <input
           type="password"
           id="password"
           formControlName="password"
-          placeholder="Ingrese su contraseña"
+          placeholder="Ingrese su contrasena"
           [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
         >
         <button type="button" class="toggle-password" (click)="togglePasswordVisibility()">
-          👁️
+          &#128065;
         </button>
       </div>
       @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
         <div class="error-message">
           @if (loginForm.get('password')?.errors?.['required']) {
-            <span>La contraseña es obligatoria</span>
+            <span>La contrasena es obligatoria</span>
           }
         </div>
       }
     </div>
 
-    @if (errorMessage) {
+    @if (errorMessage()) {
       <div class="error-message">
-        {{ errorMessage }}
+        {{ errorMessage() }}
       </div>
     }
 
-    <button type="submit" [disabled]="loginForm.invalid || isLoading" class="login-button">
-      {{ isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
+    <button type="submit" [disabled]="loginForm.invalid || isLoading()" class="login-button">
+      {{ isLoading() ? 'Iniciando sesion...' : 'Iniciar Sesion' }}
     </button>
   </form>
 </div>

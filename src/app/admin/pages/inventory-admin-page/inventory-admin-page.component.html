@@ -1,16 +1,31 @@
-<div class="flex flex-col gap-6">
+﻿<div class="flex flex-col gap-6">
   <section class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
     <div>
-      <p class="text-sm text-gray-500">Administración de inventario</p>
+      <p class="text-sm text-gray-500">AdministraciÃ³n de inventario</p>
       <h1 class="text-3xl font-bold">Inventario</h1>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-      <button class="btn btn-outline btn-sm" type="button" (click)="openHistoryDrawer()">
-        Ver movimientos
+      <button class="btn btn-outline btn-sm" type="button" (click)="openMovementsPage()">
+        Movimientos
+      </button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="openTraceabilityPage()">
+        Trazabilidad
       </button>
       <button class="btn btn-outline btn-sm" type="button" (click)="openTransfersModule()">
         Transferencias
+      </button>
+      <button
+        class="btn btn-warning btn-sm"
+        type="button"
+        [disabled]="mismatchedCount === 0 || reconcilingReserved()"
+        (click)="reconcileReservedStock()"
+      >
+        @if (reconcilingReserved()) {
+          Reconciliando...
+        } @else {
+          Reconciliar reservados ({{ mismatchedCount }})
+        }
       </button>
     </div>
   </section>
@@ -132,22 +147,22 @@
         <div class="rounded-box border border-base-300 bg-base-100 p-4 text-sm text-base-content">
           <p class="font-medium">Resumen</p>
           <p>Mostrando <strong>{{ filteredCount }}</strong> de <strong>{{ totalCount }}</strong> inventarios.</p>
-          <p class="text-xs text-gray-500">Usa búsqueda o filtros avanzados para refinar la lista.</p>
+          <p class="text-xs text-gray-500">Usa bÃºsqueda o filtros avanzados para refinar la lista.</p>
         </div>
       </div>
     </div>
 
     <div class="rounded-box border border-base-300 bg-base-200 p-4">
       <div class="mb-4 rounded-lg border border-base-300 bg-base-100 p-4 text-sm">
-        <p class="font-medium">Registro rápido</p>
+        <p class="font-medium">Registro rÃ¡pido</p>
         <p>Puedes registrar por fila o crear inventario nuevo eligiendo tienda y variante.</p>
       </div>
       <div class="grid gap-3">
         <button class="btn btn-primary" type="button" (click)="openManualMovementDrawer('IN')">
           Nuevo ingreso por tienda y variante
         </button>
-        <button class="btn btn-outline" type="button" [disabled]="filteredCount === 0" (click)="openHistoryDrawer()">
-          Ver historial completo
+        <button class="btn btn-outline" type="button" [disabled]="filteredCount === 0" (click)="openMovementsPage()">
+          Ir a movimientos
         </button>
       </div>
     </div>
@@ -172,20 +187,41 @@
             <th>{{ $index + 1 }}</th>
             <td>
               <div class="font-medium">{{ item.variant.product.name }}</div>
-              <div class="text-xs text-gray-500">{{ item.variant.size.name }} • {{ item.variant.color.name }}</div>
+              <div class="text-xs text-gray-500">{{ item.variant.size.name }} â€¢ {{ item.variant.color.name }}</div>
             </td>
             <td>{{ item.variant.sku }}</td>
             <td>{{ item.store.name }}</td>
             <td>{{ computeAvailableStock(item) }}</td>
-            <td>{{ item.reservedStock }}</td>
+            <td>
+              <div class="font-medium">{{ item.reservedStock }}</div>
+              <div class="text-xs text-gray-500">
+                Trazado: {{ getTrackedReservedStock(item) }} en {{ getTrackedReservedOrdersCount(item) }} pedido(s)
+              </div>
+              @if (hasReservedMismatch(item)) {
+                <div class="text-xs text-warning font-semibold">Descuadre entre inventario y reservas activas</div>
+              }
+            </td>
             <td>
               <div class="dropdown dropdown-end">
-                <label tabindex="0" class="btn btn-ghost btn-circle btn-sm">⋮</label>
+                <label tabindex="0" class="btn btn-ghost btn-circle btn-sm">â‹®</label>
                 <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48">
                   <li><button type="button" class="w-full text-left" (click)="openMovementDrawer(item, 'IN')">Ingreso</button></li>
                   <li><button type="button" class="w-full text-left" (click)="openMovementDrawer(item, 'OUT')">Salida</button></li>
                   <li><button type="button" class="w-full text-left" (click)="openMovementDrawer(item, 'ADJUSTMENT')">Ajuste</button></li>
-                  <li><button type="button" class="w-full text-left" (click)="openHistoryDrawer(item)">Ver historial</button></li>
+                  <li><button type="button" class="w-full text-left" (click)="openMovementsPage(item)">Ver movimientos</button></li>
+                  <li><button type="button" class="w-full text-left" (click)="openTraceabilityPage(item)">Ver trazabilidad</button></li>
+                  @if (hasReservedMismatch(item)) {
+                    <li>
+                      <button
+                        type="button"
+                        class="w-full text-left"
+                        [disabled]="reconcilingReserved()"
+                        (click)="reconcileReservedStock(item)"
+                      >
+                        Reconciliar reservado
+                      </button>
+                    </li>
+                  }
                 </ul>
               </div>
             </td>
@@ -200,15 +236,15 @@
     <aside class="fixed right-0 top-0 z-50 h-full w-full max-w-xl overflow-y-auto border-l border-base-300 bg-base-100 p-6 shadow-2xl">
       <div class="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h2 class="text-xl font-bold">{{ movementDrawerTitle }}</h2>
+          <h2 class="text-xl font-bold">Registrar movimiento</h2>
           @if (selectedInventory(); as selectedInventory) {
-            <p class="text-sm text-gray-500 mt-1">{{ selectedInventory.variant.product.name }} • {{ selectedInventory.variant.sku }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ selectedInventory.variant.product.name }} - {{ selectedInventory.variant.sku }}</p>
             <p class="text-sm text-gray-500">Tienda: {{ selectedInventory.store.name }}</p>
           } @else if (selectedMovementVariant(); as selectedVariant) {
-            <p class="text-sm text-gray-500 mt-1">{{ selectedVariant.productName }} • {{ selectedVariant.sku }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ selectedVariant.productName }} - {{ selectedVariant.sku }}</p>
           }
         </div>
-        <button class="btn btn-ghost btn-circle" type="button" (click)="closeMovementDrawer()">✕</button>
+        <button class="btn btn-ghost btn-circle" type="button" (click)="closeMovementDrawer()">âœ•</button>
       </div>
 
       @if (movementErrorMessage()) {
@@ -217,123 +253,81 @@
         </div>
       }
 
-      @if (historyMode()) {
-        <div class="space-y-4">
-          <div class="rounded-box border border-base-300 bg-base-200 p-4">
-            <p class="font-medium">Movimientos recientes</p>
-            @if (selectedInventory()) {
-              <p class="text-sm text-gray-500">Mostrando movimientos de esta variante.</p>
-            } @else {
-              <p class="text-sm text-gray-500">Mostrando todos los movimientos.</p>
+      <div class="grid gap-4">
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Tipo de movimiento</span>
+          <select class="select w-full" [value]="movementType()" (change)="setMovementType($any($event.target).value)">
+            <option value="IN">Ingreso</option>
+            <option value="OUT">Salida</option>
+            <option value="ADJUSTMENT">Ajuste</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Tienda destino</span>
+          <select class="select w-full" [value]="movementStoreId()" (change)="setMovementStoreId($any($event.target).value)">
+            <option value="">Selecciona una tienda</option>
+            @for (store of storeOptions(); track store.id) {
+              <option [value]="store.id">{{ store.name }} ({{ store.code }})</option>
             }
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Buscar variante</span>
+          <input
+            type="text"
+            class="input w-full"
+            [value]="movementVariantSearch()"
+            (input)="setMovementVariantSearch($any($event.target).value)"
+            placeholder="SKU, producto, color o talla"
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Variante</span>
+          <select class="select w-full" [value]="movementVariantId()" (change)="setMovementVariantId($any($event.target).value)">
+            <option value="">Selecciona una variante</option>
+            @for (variant of filteredVariantCatalog(); track variant.variantId) {
+              <option [value]="variant.variantId">{{ variant.label }}</option>
+            }
+          </select>
+        </label>
+
+        @if (selectedMovementVariant(); as selectedVariant) {
+          <div class="rounded-lg border border-base-300 bg-base-200 p-3 text-sm">
+            <p class="font-medium">Variante seleccionada</p>
+            <p>{{ selectedVariant.productName }}</p>
+            <p class="text-gray-500">{{ selectedVariant.colorName }} / {{ selectedVariant.sizeName }} - {{ selectedVariant.sku }}</p>
           </div>
+        }
 
-          <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-            <table class="table table-compact w-full">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Fecha</th>
-                  <th>Acci�n</th>
-                  <th>Producto comprometido</th>
-                  <th>Tipo</th>
-                  <th>Cantidad</th>
-                  <th>Nota</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (movement of selectedInventoryMovements; track movement.id) {
-                  <tr>
-                    <th>{{ $index + 1 }}</th>
-                    <td>{{ movement.createdAt | date:'short' }}</td>
-                    <td>{{ getMovementActionLabel(movement) }}</td>
-                    <td>{{ getMovementCommittedProduct(movement) }}</td>
-                    <td>{{ movement.type }}</td>
-                    <td>{{ movement.quantity }}</td>
-                    <td>{{ movement.note || '-' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      } @else {
-        <div class="grid gap-4">
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Tipo de movimiento</span>
-            <select class="select w-full" [value]="movementType()" (change)="setMovementType($any($event.target).value)">
-              <option value="IN">Ingreso</option>
-              <option value="OUT">Salida</option>
-              <option value="ADJUSTMENT">Ajuste</option>
-            </select>
-          </label>
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Cantidad</span>
+          <input
+            type="number"
+            min="1"
+            class="input w-full"
+            [value]="movementQuantity()"
+            (input)="setMovementQuantity($any($event.target).value)"
+          />
+        </label>
 
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Tienda destino</span>
-            <select class="select w-full" [value]="movementStoreId()" (change)="setMovementStoreId($any($event.target).value)">
-              <option value="">Selecciona una tienda</option>
-              @for (store of storeOptions(); track store.id) {
-                <option [value]="store.id">{{ store.name }} ({{ store.code }})</option>
-              }
-            </select>
-          </label>
+        <label class="flex flex-col gap-2">
+          <span class="label-text">Nota</span>
+          <input
+            type="text"
+            class="input w-full"
+            [value]="movementNote()"
+            (input)="setMovementNote($any($event.target).value)"
+            placeholder="Ej. Ajuste de conteo o motivo"
+          />
+        </label>
 
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Buscar variante</span>
-            <input
-              type="text"
-              class="input w-full"
-              [value]="movementVariantSearch()"
-              (input)="setMovementVariantSearch($any($event.target).value)"
-              placeholder="SKU, producto, color o talla"
-            />
-          </label>
-
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Variante</span>
-            <select class="select w-full" [value]="movementVariantId()" (change)="setMovementVariantId($any($event.target).value)">
-              <option value="">Selecciona una variante</option>
-              @for (variant of filteredVariantCatalog(); track variant.variantId) {
-                <option [value]="variant.variantId">{{ variant.label }}</option>
-              }
-            </select>
-          </label>
-
-          @if (selectedMovementVariant(); as selectedVariant) {
-            <div class="rounded-lg border border-base-300 bg-base-200 p-3 text-sm">
-              <p class="font-medium">Variante seleccionada</p>
-              <p>{{ selectedVariant.productName }}</p>
-              <p class="text-gray-500">{{ selectedVariant.colorName }} / {{ selectedVariant.sizeName }} � {{ selectedVariant.sku }}</p>
-            </div>
-          }
-
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Cantidad</span>
-            <input
-              type="number"
-              min="1"
-              class="input w-full"
-              [value]="movementQuantity()"
-              (input)="setMovementQuantity($any($event.target).value)"
-            />
-          </label>
-
-          <label class="flex flex-col gap-2">
-            <span class="label-text">Nota</span>
-            <input
-              type="text"
-              class="input w-full"
-              [value]="movementNote()"
-              (input)="setMovementNote($any($event.target).value)"
-              placeholder="Ej. Ajuste de conteo o motivo"
-            />
-          </label>
-
-          <button class="btn btn-primary w-full" type="button" [disabled]="!canSaveMovement" (click)="saveMovement()">
-            Guardar movimiento
-          </button>
-        </div>
-      }
+        <button class="btn btn-primary w-full" type="button" [disabled]="!canSaveMovement" (click)="saveMovement()">
+          Guardar movimiento
+        </button>
+      </div>
     </aside>
   }
 </div>

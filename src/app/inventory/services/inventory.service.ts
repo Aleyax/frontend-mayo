@@ -4,6 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Inventory,
+  InventoryReservation,
+  InventoryReservedReconcileResult,
   InventoryMovement,
   InventoryMovementType,
   StockTransfer
@@ -41,6 +43,42 @@ export class InventoryService {
 
   listMovements(): Observable<InventoryMovement[]> {
     return this.http.get<InventoryMovement[]>(`${baseurl}/inventory/movements`);
+  }
+
+  listReservations(options: {
+    inventoryId?: number;
+    storeId?: number;
+    variantId?: number;
+    orderId?: number;
+    status?: string | string[];
+  } = {}): Observable<InventoryReservation[]> {
+    const params = new URLSearchParams();
+
+    if (options.inventoryId !== undefined) {
+      params.set('inventoryId', String(options.inventoryId));
+    }
+    if (options.storeId !== undefined) {
+      params.set('storeId', String(options.storeId));
+    }
+    if (options.variantId !== undefined) {
+      params.set('variantId', String(options.variantId));
+    }
+    if (options.orderId !== undefined) {
+      params.set('orderId', String(options.orderId));
+    }
+    if (options.status !== undefined) {
+      const statuses = Array.isArray(options.status) ? options.status : [options.status];
+      params.set('status', statuses.join(','));
+    }
+
+    const query = params.toString();
+    return this.http.get<InventoryReservation[]>(`${baseurl}/inventory/reservations${query ? `?${query}` : ''}`);
+  }
+
+  reconcileReservedStock(inventoryIds: number[] = []): Observable<InventoryReservedReconcileResult> {
+    return this.http.post<InventoryReservedReconcileResult>(`${baseurl}/inventory/reconcile-reserved`, {
+      inventoryIds,
+    });
   }
 
   createMovement(body: {

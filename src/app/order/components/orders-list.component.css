@@ -44,6 +44,63 @@
   margin-bottom: 1rem;
 }
 
+.quick-status-section {
+  margin-bottom: 1rem;
+}
+
+.quick-status-title {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--orders-text);
+  margin-bottom: 0.5rem;
+}
+
+.quick-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.quick-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--orders-border);
+  background: var(--orders-surface-soft);
+  color: var(--orders-text);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.quick-status-badge:hover {
+  transform: translateY(-1px);
+  border-color: var(--orders-primary);
+}
+
+.quick-status-badge--active {
+  border-color: var(--orders-primary);
+  background: color-mix(in oklab, var(--orders-primary) 16%, var(--orders-surface));
+}
+
+.quick-status-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--orders-primary) 20%, transparent);
+  color: var(--orders-text);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0 0.35rem;
+}
+
 .filters-grid {
   display: grid;
   gap: 0.8rem;

@@ -6,6 +6,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { OrderService, OrderStatus } from '../services/order.service';
 import { StoreService } from '../../store/services/store.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { forkJoin, map, Observable, of } from 'rxjs';
 
 type OrdersFilters = {
   status?: string;
@@ -21,6 +22,11 @@ type OrdersQuery = OrdersFilters & {
   limit: number;
 };
 
+type QuickStatusOption = {
+  value: OrderStatus;
+  label: string;
+};
+
 @Component({
   selector: 'app-orders-list',
   templateUrl: './orders-list.component.html',
@@ -32,12 +38,22 @@ export class OrdersListComponent implements OnInit {
   private readonly appliedFilters = signal<OrdersFilters>({});
   readonly currentPage = signal(1);
   readonly pageSize = 10;
+  readonly quickStatusFilters: QuickStatusOption[] = [
+    { value: 'PENDING', label: 'Pendiente' },
+    { value: 'CONFIRMED', label: 'Confirmado' },
+    { value: 'PREPARING', label: 'Preparando' }
+  ];
 
   private readonly ordersQuery = computed<OrdersQuery>(() => ({
     page: this.currentPage(),
     limit: this.pageSize,
     ...this.appliedFilters()
   }));
+
+  private readonly quickStatusBaseFilters = computed<Omit<OrdersFilters, 'status'>>(() => {
+    const { status: _status, ...filtersWithoutStatus } = this.appliedFilters();
+    return filtersWithoutStatus;
+  });
 
   private readonly storesResource = rxResource<any[], void>({
     defaultValue: [],
@@ -58,6 +74,22 @@ export class OrdersListComponent implements OnInit {
     stream: ({ params }) => this.orderService.listOrders(params)
   });
 
+  private readonly quickStatusCountsResource = rxResource<Record<OrderStatus, number>, Omit<OrdersFilters, 'status'>>({
+    defaultValue: {
+      PENDING: 0,
+      CONFIRMED: 0,
+      PREPARING: 0,
+      WAITING_TRANSFER: 0,
+      READY: 0,
+      DELIVERED: 0,
+      RETURN_PENDING: 0,
+      CANCELLED: 0,
+      WAITING_STOCK: 0
+    },
+    params: () => this.quickStatusBaseFilters(),
+    stream: ({ params }) => this.loadQuickStatusCounts(params)
+  });
+
   readonly stores = computed<any[]>(() => this.normalizeStores(this.storesResource.value()));
   readonly orders = computed<any[]>(() => this.normalizeOrders(this.ordersResource.value()));
   readonly totalOrders = computed<number>(() => {
@@ -72,6 +104,7 @@ export class OrdersListComponent implements OnInit {
   });
   readonly loading = computed<boolean>(() => this.ordersResource.isLoading());
   readonly loadError = computed<string>(() => this.extractOrderErrorMessage(this.ordersResource.error()));
+  readonly quickStatusCounts = computed<Record<OrderStatus, number>>(() => this.quickStatusCountsResource.value());
 
   readonly statusOptions = [
     { value: '', label: 'Todos los estados' },
@@ -301,11 +334,83 @@ export class OrdersListComponent implements OnInit {
     this.orderService.updateOrderStatus(order.id, newStatus).subscribe({
       next: () => {
         this.ordersResource.reload();
+        this.quickStatusCountsResource.reload();
       },
       error: (error) => {
         this.alertService.show(error?.error?.error || 'Error al actualizar', 'error');
       }
     });
+  }
+
+  applyQuickStatus(status: OrderStatus) {
+    if (!this.filterForm) {
+      return;
+    }
+
+    const currentStatus = String(this.filterForm.get('status')?.value || '').toUpperCase();
+    const nextStatus = currentStatus === status ? '' : status;
+    this.filterForm.patchValue({ status: nextStatus });
+    this.applyFilters();
+  }
+
+  isQuickStatusSelected(status: OrderStatus): boolean {
+    if (!this.filterForm) {
+      return false;
+    }
+
+    return String(this.filterForm.get('status')?.value || '').toUpperCase() === status;
+  }
+
+  getQuickStatusCount(status: OrderStatus): number {
+    return Number(this.quickStatusCounts()[status] || 0);
+  }
+
+  private loadQuickStatusCounts(baseFilters: Omit<OrdersFilters, 'status'>): Observable<Record<OrderStatus, number>> {
+    const requests = this.quickStatusFilters.reduce<Record<OrderStatus, Observable<any>>>((accumulator, option) => {
+      accumulator[option.value] = this.orderService.listOrders({
+        ...baseFilters,
+        status: option.value,
+        page: 1,
+        limit: 1
+      });
+      return accumulator;
+    }, {} as Record<OrderStatus, Observable<any>>);
+
+    if (Object.keys(requests).length === 0) {
+      return of({
+        PENDING: 0,
+        CONFIRMED: 0,
+        PREPARING: 0,
+        WAITING_TRANSFER: 0,
+        READY: 0,
+        DELIVERED: 0,
+        RETURN_PENDING: 0,
+        CANCELLED: 0,
+        WAITING_STOCK: 0
+      });
+    }
+
+    return forkJoin(requests).pipe(
+      map((responses) => {
+        const counts: Record<OrderStatus, number> = {
+          PENDING: 0,
+          CONFIRMED: 0,
+          PREPARING: 0,
+          WAITING_TRANSFER: 0,
+          READY: 0,
+          DELIVERED: 0,
+          RETURN_PENDING: 0,
+          CANCELLED: 0,
+          WAITING_STOCK: 0
+        };
+
+        for (const option of this.quickStatusFilters) {
+          counts[option.value] = Number(responses[option.value]?.pagination?.total || 0);
+        }
+
+        return counts;
+      })
+    );
   }
 
   getStatusColor(status: string): string {

@@ -1,0 +1,99 @@
+<div class="flex flex-col gap-6">
+  <section class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <p class="text-sm text-gray-500">Inventario</p>
+      <h1 class="text-3xl font-bold">Movimientos</h1>
+      <p class="text-sm text-gray-500">Historial completo de ingresos, salidas y ajustes.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a routerLink="/admin/inventory" class="btn btn-outline btn-sm">Volver a inventario</a>
+      <a routerLink="/admin/inventory/traceability" class="btn btn-outline btn-sm">Ir a trazabilidad</a>
+      <button class="btn btn-outline btn-sm" type="button" (click)="refresh()">Actualizar</button>
+    </div>
+  </section>
+
+  <section class="rounded-box border border-base-300 bg-base-200 p-4">
+    <div class="grid gap-4 lg:grid-cols-[2fr_1fr_auto]">
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Buscar movimiento</span>
+        <input
+          type="text"
+          class="input w-full"
+          [value]="searchParam()"
+          (input)="setSearchParam($any($event.target).value)"
+          placeholder="SKU, producto, tienda o nota"
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="label-text">Tipo</span>
+        <select class="select w-full" [value]="movementTypeFilter()" (change)="setMovementTypeFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="IN">Ingreso</option>
+          <option value="OUT">Salida</option>
+          <option value="ADJUSTMENT">Ajuste</option>
+          <option value="TRANSFER_OUT">Transferencia salida</option>
+          <option value="TRANSFER_IN">Transferencia ingreso</option>
+          <option value="RESERVED">Comprometido</option>
+          <option value="UNRESERVED">Liberado</option>
+        </select>
+      </label>
+      <div class="flex items-end">
+        @if (inventoryIdFilter()) {
+          <button class="btn btn-ghost btn-sm" type="button" (click)="clearInventoryFilter()">Quitar filtro de variante</button>
+        }
+      </div>
+    </div>
+
+    <div class="mt-3 text-sm text-gray-600">
+      Mostrando <strong>{{ filteredCount }}</strong> de <strong>{{ totalCount }}</strong> movimientos.
+      @if (inventoryIdFilter()) {
+        <span class="ml-1">Filtro activo por inventario #{{ inventoryIdFilter() }}.</span>
+      }
+    </div>
+  </section>
+
+  <section class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table table-zebra w-full">
+      <thead class="bg-base-200 text-base-content">
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Variante</th>
+          <th>Tienda</th>
+          <th>Cantidad</th>
+          <th>Nota</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="8" class="py-8 text-center text-sm text-gray-500">Cargando movimientos...</td>
+          </tr>
+        } @else if (filteredMovements().length === 0) {
+          <tr>
+            <td colspan="8" class="py-8 text-center text-sm text-gray-500">No hay movimientos para los filtros seleccionados.</td>
+          </tr>
+        } @else {
+          @for (movement of filteredMovements(); track movement.id) {
+            <tr>
+              <td>{{ movement.id }}</td>
+              <td>{{ movement.createdAt | date:'short' }}</td>
+              <td>{{ getMovementTypeLabel(movement.type) }}</td>
+              <td>{{ getMovementSummary(movement) }}</td>
+              <td>{{ getMovementStore(movement) }}</td>
+              <td>{{ movement.quantity }}</td>
+              <td>{{ movement.note || '-' }}</td>
+              <td>
+                <button class="btn btn-ghost btn-xs" type="button" (click)="openTraceabilityForMovement(movement)">
+                  Ver trazabilidad
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+</div>

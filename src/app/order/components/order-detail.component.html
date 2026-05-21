@@ -422,7 +422,7 @@
                           (click)="markPickingItemFromDetail(item, 'inc')"
                           [disabled]="
                             isPickingItemUpdating(item) ||
-                            item.pickedQuantity >= item.requestedQuantity
+                            item.pickedQuantity >= getPickingItemLimit(item)
                           "
                         >
                           +
@@ -433,7 +433,7 @@
                           (click)="markPickingItemFromDetail(item, 'complete')"
                           [disabled]="
                             isPickingItemUpdating(item) ||
-                            item.pickedQuantity >= item.requestedQuantity
+                            item.pickedQuantity >= getPickingItemLimit(item)
                           "
                         >
                           Completar
@@ -498,7 +498,7 @@
                       (click)="markPickingItemFromDetail(item, 'inc')"
                       [disabled]="
                         isPickingItemUpdating(item) ||
-                        item.pickedQuantity >= item.requestedQuantity
+                        item.pickedQuantity >= getPickingItemLimit(item)
                       "
                     >
                       +
@@ -509,7 +509,7 @@
                       (click)="markPickingItemFromDetail(item, 'complete')"
                       [disabled]="
                         isPickingItemUpdating(item) ||
-                        item.pickedQuantity >= item.requestedQuantity
+                        item.pickedQuantity >= getPickingItemLimit(item)
                       "
                     >
                       Completar

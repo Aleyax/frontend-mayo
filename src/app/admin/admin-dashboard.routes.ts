@@ -46,6 +46,18 @@ export const adminDashboardRoute: Routes = [
         loadComponent: () => import('./pages/product-admin-page/product-admin-page.component').then(m => m.ProductAdminPageComponent)
       },
       {
+        path: 'inventory/movements',
+        canActivate: [PermissionGuard],
+        data: { permission: 'inventory.view' },
+        loadComponent: () => import('./pages/inventory-movements-page/inventory-movements-page.component').then(m => m.InventoryMovementsPageComponent)
+      },
+      {
+        path: 'inventory/traceability',
+        canActivate: [PermissionGuard],
+        data: { permission: 'inventory.view' },
+        loadComponent: () => import('./pages/inventory-traceability-page/inventory-traceability-page.component').then(m => m.InventoryTraceabilityPageComponent)
+      },
+      {
         path: 'inventory',
         canActivate: [PermissionGuard],
         data: { permission: 'inventory.view' },

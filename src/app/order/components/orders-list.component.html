@@ -5,6 +5,23 @@
   </div>
 
   <div class="filters-section">
+    <div class="quick-status-section">
+      <span class="quick-status-title">Filtros rapidos</span>
+      <div class="quick-status-list">
+        @for (status of quickStatusFilters; track status.value) {
+          <button
+            type="button"
+            class="quick-status-badge"
+            [class.quick-status-badge--active]="isQuickStatusSelected(status.value)"
+            (click)="applyQuickStatus(status.value)"
+          >
+            <span>{{ status.label }}</span>
+            <span class="quick-status-count">{{ getQuickStatusCount(status.value) }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
     <form [formGroup]="filterForm" class="filters-grid" (ngSubmit)="applyFilters()">
       <div class="filter-group">
         <label for="searchFilter">Buscar</label>

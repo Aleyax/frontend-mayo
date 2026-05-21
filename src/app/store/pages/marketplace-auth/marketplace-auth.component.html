@@ -5,16 +5,16 @@
     <p>Inicia sesion o registrate para guardar tu historial de pedidos.</p>
 
     <div class="mode-switch">
-      <button type="button" [class.active]="mode === 'login'" (click)="switchMode('login')">
+      <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">
         Iniciar sesion
       </button>
-      <button type="button" [class.active]="mode === 'register'" (click)="switchMode('register')">
+      <button type="button" [class.active]="mode() === 'register'" (click)="switchMode('register')">
         Registrarme
       </button>
     </div>
 
     <form class="auth-form" (submit)="$event.preventDefault(); submit()">
-      @if (mode === 'register') {
+      @if (mode() === 'register') {
         <label>
           Nombres
           <input type="text" [(ngModel)]="firstName" name="firstName" />
@@ -42,12 +42,12 @@
         <input type="password" [(ngModel)]="password" name="password" />
       </label>
 
-      @if (errorMessage) {
-        <p class="error-msg">{{ errorMessage }}</p>
+      @if (errorMessage()) {
+        <p class="error-msg">{{ errorMessage() }}</p>
       }
 
-      <button type="submit" class="submit-btn" [disabled]="loading">
-        {{ loading ? 'Procesando...' : (mode === 'login' ? 'Entrar' : 'Crear cuenta') }}
+      <button type="submit" class="submit-btn" [disabled]="loading()">
+        {{ loading() ? 'Procesando...' : (mode() === 'login' ? 'Entrar' : 'Crear cuenta') }}
       </button>
     </form>
   </article>

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from './auth.service';
 import { PermissionService } from './permission.service';
@@ -7,15 +7,13 @@ import { PermissionService } from './permission.service';
   providedIn: 'root'
 })
 export class PermissionGuard implements CanActivate {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly permissionService: PermissionService,
-    private readonly router: Router
-  ) {}
+  private readonly authService = inject(AuthService);
+  private readonly permissionService = inject(PermissionService);
+  private readonly router = inject(Router);
 
   canActivate(route: ActivatedRouteSnapshot, _state: RouterStateSnapshot): boolean {
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
+      void this.router.navigate(['/login']);
       return false;
     }
 
@@ -32,8 +30,7 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
-    this.router.navigate(['/admin/forbidden']);
+    void this.router.navigate(['/admin/forbidden']);
     return false;
   }
 }
-

@@ -833,6 +833,21 @@ export class OrderDetailComponent implements OnInit {
     return 'pending';
   }
 
+  getPickingItemLimit(item: any): number {
+    const requestedQuantity = Math.max(0, Number(item?.requestedQuantity || 0));
+    const explicitMax = Number(item?.maxPickableQuantity);
+    if (Number.isFinite(explicitMax) && explicitMax >= 0) {
+      return Math.min(requestedQuantity, explicitMax);
+    }
+
+    const reservedQuantity = Number(item?.reservedQuantity);
+    if (Number.isFinite(reservedQuantity) && reservedQuantity >= 0) {
+      return Math.min(requestedQuantity, reservedQuantity);
+    }
+
+    return requestedQuantity;
+  }
+
   isPickingItemUpdating(item: any): boolean {
     const itemId = Number(item?.pickingItemId || 0);
     return itemId > 0 && this.updatingPickingItemIds.has(itemId);
@@ -862,13 +877,13 @@ export class OrderDetailComponent implements OnInit {
       return;
     }
 
-    const requested = Number(item?.requestedQuantity || 0);
+    const maxPickable = this.getPickingItemLimit(item);
     const current = Number(item?.pickedQuantity || 0);
     let nextQuantity = current;
 
-    if (action === 'inc') nextQuantity = Math.min(requested, current + 1);
+    if (action === 'inc') nextQuantity = Math.min(maxPickable, current + 1);
     if (action === 'dec') nextQuantity = Math.max(0, current - 1);
-    if (action === 'complete') nextQuantity = requested;
+    if (action === 'complete') nextQuantity = maxPickable;
 
     if (nextQuantity === current) return;
 

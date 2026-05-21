@@ -267,11 +267,7 @@
                 >
                   {{ variant.sizeName }}
                   <small>
-                    @if (variant.availableStock > 0) {
-                      {{ variant.availableStock }} disp.
-                    } @else {
-                      Sin stock local
-                    }
+                    {{ getVariantStockChipLabel(variant) }}
                   </small>
                 </button>
               }
@@ -288,11 +284,7 @@
 
           @if (selectedVariant; as variant) {
             <div class="stock-info">
-              @if (variant.availableStock > 0) {
-                <p>Stock disponible: {{ variant.availableStock }} | Reservado: {{ variant.reservedStock }}</p>
-              } @else {
-                <p>Sin stock en {{ getCurrentStoreName() }}.</p>
-              }
+              <p>{{ getSelectedVariantStockStatus() }}</p>
             </div>
           }
 

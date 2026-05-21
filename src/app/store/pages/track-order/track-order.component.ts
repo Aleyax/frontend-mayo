@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { map, of } from 'rxjs';
 import {
@@ -57,6 +57,7 @@ export class TrackOrderComponent implements OnInit {
   private readonly marketplaceService = inject(MarketplaceService);
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly manualError = signal('');
   private readonly ordersQuery = signal<OrdersQuery | null>(null);
   private readonly trackQuery = signal<TrackQuery | null>(null);
@@ -120,14 +121,14 @@ export class TrackOrderComponent implements OnInit {
     defaultValue: null,
   });
 
-  readonly myOrders = computed(() => this.ordersResource.value() ?? []);
+  readonly myOrders = computed(() => this.readResourceValue(this.ordersResource, [] as MarketplaceMyOrderSummary[]));
   readonly result = computed<OrderDetailView | null>(() => {
-    const detailed = this.detailResource.value();
+    const detailed = this.readResourceValue(this.detailResource, null as MarketplaceOrderSummary | null);
     if (detailed) {
       return this.mapSummaryToDetailView(detailed);
     }
 
-    const tracked = this.trackResource.value();
+    const tracked = this.readResourceValue(this.trackResource, null as MarketplaceTrackResponse | null);
     if (tracked) {
       return this.mapTrackToDetailView(tracked);
     }
@@ -200,10 +201,9 @@ export class TrackOrderComponent implements OnInit {
     }
 
     if (this.marketplaceAuthService.isAuthenticated()) {
-      this.viewMyOrders();
-      if (this.code.trim()) {
-        this.searchByCode(true);
-      }
+      const code = this.code.trim().toUpperCase();
+      this.router.navigate(['/marketplace/account'], code ? { queryParams: { code } } : undefined);
+      return;
     }
   }
 
@@ -239,16 +239,28 @@ export class TrackOrderComponent implements OnInit {
 
   searchByCode(keepOrdersVisible: boolean = false) {
     this.manualError.set('');
+    const trimmedCode = this.code.trim().toUpperCase();
+
+    if (!trimmedCode) {
+      this.manualError.set('Ingresa un codigo para buscar el pedido.');
+      return;
+    }
+
+    if (this.marketplaceAuthService.isAuthenticated()) {
+      if (!keepOrdersVisible) {
+        this.ordersQuery.set(null);
+        this.didRequestOrders.set(false);
+        this.ordersRequestMode.set('none');
+      }
+      this.trackQuery.set(null);
+      this.detailCodeQuery.set(trimmedCode);
+      return;
+    }
+
     if (!keepOrdersVisible) {
       this.ordersQuery.set(null);
       this.didRequestOrders.set(false);
       this.ordersRequestMode.set('none');
-    }
-
-    const trimmedCode = this.code.trim().toUpperCase();
-    if (!trimmedCode) {
-      this.manualError.set('Ingresa un codigo para buscar el pedido.');
-      return;
     }
 
     if (!this.phone.trim()) {
@@ -339,5 +351,13 @@ export class TrackOrderComponent implements OnInit {
         subtotal: Number(item.subtotal || 0),
       })),
     };
+  }
+
+  private readResourceValue<T>(resource: { value: () => T }, fallback: T): T {
+    try {
+      return resource.value();
+    } catch {
+      return fallback;
+    }
   }
 }

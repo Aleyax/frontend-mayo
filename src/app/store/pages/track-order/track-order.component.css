@@ -89,7 +89,7 @@
 .track-form button {
   border: 0;
   border-radius: 9px;
-  background: #ff6a00;
+  background: var(--color-primary, #0b63ce);
   color: #ffffff;
   font-weight: 700;
   padding: 0.56rem 0.88rem;

@@ -4,7 +4,7 @@
   --mka-surface-soft: color-mix(in oklab, var(--mka-surface) 84%, var(--mka-text) 16%);
   --mka-text: var(--color-base-content, #0f172a);
   --mka-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
-  --mka-accent: #ff6a00;
+  --mka-accent: var(--color-primary, #0b63ce);
 }
 
 .mk-auth-page {
@@ -104,4 +104,3 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
-

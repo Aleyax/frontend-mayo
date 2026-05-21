@@ -1,9 +1,20 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
 import { AuthService } from '../../../auth/auth.service';
 import { OrderService } from '../../../order/services/order.service';
-import { Subscription, filter, interval } from 'rxjs';
+import { catchError, filter, interval, map, of, startWith, Subscription } from 'rxjs';
+
+type PendingAssignment = {
+  orderId: number;
+  orderCode: string;
+  title: string;
+  detail: string;
+  units: number;
+  acceptanceStatus: 'PENDING' | 'ACCEPTED';
+  createdAt: string | null;
+};
 
 @Component({
   selector: 'app-admin-dashboard-layout',
@@ -15,19 +26,48 @@ import { Subscription, filter, interval } from 'rxjs';
 export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
   currentTheme: 'dark' | 'light' = 'dark';
   notificationsOpen = false;
-  loadingNotifications = false;
-  pendingAssignments: Array<{
-    orderId: number;
-    orderCode: string;
-    title: string;
-    detail: string;
-    units: number;
-    acceptanceStatus: 'PENDING' | 'ACCEPTED';
-    createdAt: string | null;
-  }> = [];
+
+  private readonly notificationsPollTick = toSignal(interval(45000).pipe(startWith(0)), {
+    initialValue: 0,
+  });
+
+  private readonly pendingAssignmentsResource = rxResource<
+    PendingAssignment[],
+    { userId: number; tick: number } | undefined
+  >({
+    params: () => {
+      const userId = Number(this.currentUser?.id || 0);
+      if (!Number.isInteger(userId) || userId < 1) {
+        return undefined;
+      }
+
+      return {
+        userId,
+        tick: this.notificationsPollTick(),
+      };
+    },
+    stream: ({ params }) => {
+      if (!params) {
+        return of([] as PendingAssignment[]);
+      }
+
+      return this.orderService
+        .listOrders({
+          page: 1,
+          limit: 50,
+          status: 'RETURN_PENDING',
+          responsibleUserId: params.userId,
+        })
+        .pipe(
+          map((response: any) => this.mapPendingAssignments(response, params.userId)),
+          catchError(() => of([] as PendingAssignment[])),
+        );
+    },
+    defaultValue: [],
+  });
+
   private tableEnhancerObserver?: MutationObserver;
   private routerEventsSub?: Subscription;
-  private notificationPollingSub?: Subscription;
 
   constructor(
     private authService: AuthService,
@@ -46,7 +86,6 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.tableEnhancerObserver?.disconnect();
     this.routerEventsSub?.unsubscribe();
-    this.notificationPollingSub?.unsubscribe();
   }
 
   logout() {
@@ -54,7 +93,7 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   get currentUser() {
-    return this.authService.getCurrentUser();
+    return this.authService.currentUser();
   }
 
   get isAdmin() {
@@ -63,6 +102,19 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
 
   get pendingAssignmentsCount() {
     return this.pendingAssignments.length;
+  }
+
+  get pendingAssignments(): PendingAssignment[] {
+    return this.pendingAssignmentsResource.value();
+  }
+
+  get loadingNotifications(): boolean {
+    const userId = Number(this.currentUser?.id || 0);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return false;
+    }
+
+    return this.pendingAssignmentsResource.isLoading();
   }
 
   toggleTheme() {
@@ -106,65 +158,38 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   private setupNotificationsPolling() {
-    this.loadPendingAssignments();
-    this.notificationPollingSub = interval(45000).subscribe(() => {
-      this.loadPendingAssignments();
-    });
+    this.pendingAssignmentsResource.value();
   }
 
-  private loadPendingAssignments() {
-    const userId = Number(this.currentUser?.id || 0);
-    if (!Number.isInteger(userId) || userId < 1) {
-      this.pendingAssignments = [];
-      this.loadingNotifications = false;
-      return;
-    }
+  private mapPendingAssignments(response: any, userId: number): PendingAssignment[] {
+    const rawOrders = Array.isArray(response?.data) ? response.data : [];
+    return rawOrders
+      .filter((order: any) => Number(order?.returnWorkflow?.responsible?.id || 0) === userId)
+      .map((order: any) => {
+        const acceptance = String(order?.returnWorkflow?.acceptanceStatus || '').toUpperCase() === 'ACCEPTED'
+          ? 'ACCEPTED'
+          : 'PENDING';
+        const units = this.getPendingReturnUnits(order);
+        const client = String(order?.clientName || order?.clientEmail || 'Cliente').trim();
 
-    this.loadingNotifications = true;
-    this.orderService.listOrders({
-      page: 1,
-      limit: 50,
-      status: 'RETURN_PENDING',
-      responsibleUserId: userId,
-    }).subscribe({
-      next: (response: any) => {
-        const rawOrders = Array.isArray(response?.data) ? response.data : [];
-        const assignments = rawOrders
-          .filter((order: any) => Number(order?.returnWorkflow?.responsible?.id || 0) === userId)
-          .map((order: any) => {
-            const acceptance = String(order?.returnWorkflow?.acceptanceStatus || '').toUpperCase() === 'ACCEPTED'
-              ? 'ACCEPTED'
-              : 'PENDING';
-            const units = this.getPendingReturnUnits(order);
-            const client = String(order?.clientName || order?.clientEmail || 'Cliente').trim();
-
-            return {
-              orderId: Number(order?.id || 0),
-              orderCode: String(order?.code || 'SIN-CODIGO'),
-              title: acceptance === 'PENDING'
-                ? 'Devolucion delegada pendiente de aceptar'
-                : 'Devolucion pendiente de cerrar',
-              detail: `${client} · ${units} und. por devolver`,
-              units,
-              acceptanceStatus: acceptance as 'PENDING' | 'ACCEPTED',
-              createdAt: order?.returnWorkflow?.requestedAt || order?.updatedAt || null,
-            };
-          })
-          .filter((assignment: any) => assignment.orderId > 0)
-          .sort((a: any, b: any) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-          });
-
-        this.pendingAssignments = assignments;
-        this.loadingNotifications = false;
-      },
-      error: () => {
-        this.pendingAssignments = [];
-        this.loadingNotifications = false;
-      },
-    });
+        return {
+          orderId: Number(order?.id || 0),
+          orderCode: String(order?.code || 'SIN-CODIGO'),
+          title: acceptance === 'PENDING'
+            ? 'Devolucion delegada pendiente de aceptar'
+            : 'Devolucion pendiente de cerrar',
+          detail: `${client} - ${units} und. por devolver`,
+          units,
+          acceptanceStatus: acceptance as 'PENDING' | 'ACCEPTED',
+          createdAt: order?.returnWorkflow?.requestedAt || order?.updatedAt || null,
+        };
+      })
+      .filter((assignment: PendingAssignment) => assignment.orderId > 0)
+      .sort((a: PendingAssignment, b: PendingAssignment) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
   }
 
   private getPendingReturnUnits(order: any): number {
@@ -199,6 +224,7 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
     this.routerEventsSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
+        this.closeMobileSidebarAfterNavigation();
         setTimeout(enhanceTables, 0);
       });
 
@@ -212,6 +238,17 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
     });
 
     enhanceTables();
+  }
+
+  private closeMobileSidebarAfterNavigation() {
+    if (typeof window === 'undefined' || window.matchMedia('(min-width: 1024px)').matches) {
+      return;
+    }
+
+    const drawerToggle = document.getElementById('my-drawer-4');
+    if (drawerToggle instanceof HTMLInputElement) {
+      drawerToggle.checked = false;
+    }
   }
 
   private decorateTablesForMobileCards() {

@@ -1,9 +1,8 @@
 ﻿import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { InventoryService } from '../../../inventory/services/inventory.service';
-import { Inventory } from '../../../inventory/interfaces/inventory.interface';
+import { Inventory, InventoryReservation } from '../../../inventory/interfaces/inventory.interface';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { AlertService } from '../../../shared/services/alert.service';
@@ -25,8 +24,7 @@ interface InventoryVariantOption {
   selector: 'app-inventory-admin-page',
   templateUrl: './inventory-admin-page.component.html',
   styleUrls: ['./inventory-admin-page.component.css'],
-  standalone: true,
-  imports: [DatePipe]
+  standalone: true
 })
 export class InventoryAdminPageComponent implements OnInit, OnDestroy {
   private inventoryService = inject(InventoryService);
@@ -52,15 +50,15 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
   creatingMovement = signal<boolean>(false);
   showAdvancedFilters = signal<boolean>(false);
   movementDrawerOpen = signal<boolean>(false);
-  historyMode = signal<boolean>(false);
   selectedInventory = signal<Inventory | null>(null);
-  movementsData = signal<any[]>([]);
+  reservationsData = signal<InventoryReservation[]>([]);
   searchSubject = new Subject<string>();
   searchParam = signal<string>('');
   skuFilter = signal<string>('');
   includeZero = signal<boolean>(true);
   reservedOnly = signal<boolean>(false);
   lowStockThreshold = signal<number>(0);
+  reconcilingReserved = signal<boolean>(false);
 
   productOptions = computed(() => {
     const products = new Map<number, string>();
@@ -105,7 +103,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
           productName: product.name,
           colorName,
           sizeName,
-          label: `${product.name} • ${colorName} / ${sizeName} • ${sku}`,
+          label: `${product.name} - ${colorName} / ${sizeName} - ${sku}`,
         });
       });
     });
@@ -146,20 +144,12 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     return this.inventoryData().length;
   }
 
+  get mismatchedCount() {
+    return this.ListaInventarios().filter((item) => this.hasReservedMismatch(item)).length;
+  }
+
   get canSaveMovement() {
     return !!this.movementStoreId() && !!this.movementVariantId() && this.movementQuantity() > 0 && !this.creatingMovement();
-  }
-
-  get movementDrawerTitle() {
-    return this.historyMode() ? 'Historial de movimientos' : 'Registrar movimiento';
-  }
-
-  get selectedInventoryMovements() {
-    const selected = this.selectedInventory();
-    if (!selected) {
-      return this.movementsData();
-    }
-    return this.movementsData().filter((movement) => movement.inventory?.id === selected.id);
   }
 
   private getFilteredInventories(): Inventory[] {
@@ -215,7 +205,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     this.loadInventories();
     this.loadStoreOptions();
     this.loadProductCatalog();
-    this.loadMovements();
+    this.loadReservations();
     this.searchSubject.pipe(debounceTime(400)).subscribe((param) => {
       this.searchParam.set(param);
     });
@@ -239,24 +229,24 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadMovements() {
-    this.inventoryService.listMovements().subscribe({
-      next: (movements) => {
-        this.movementsData.set(movements);
-      },
-      error: (error: unknown) => {
-        console.error('Error al cargar movimientos:', error);
-        this.alertService.show('Error al cargar movimientos', 'error', 3000);
-      }
-    });
-  }
-
   private loadStoreOptions() {
     this.storeService.getStores({ skip: 1, take: 100 }).subscribe({
       next: (stores: Store[]) => this.storeOptions.set(stores),
       error: (error: unknown) => {
         console.error('Error al cargar tiendas:', error);
         this.alertService.show('Error al cargar las tiendas', 'error', 3000);
+      }
+    });
+  }
+
+  private loadReservations() {
+    this.inventoryService.listReservations().subscribe({
+      next: (reservations) => {
+        this.reservationsData.set(reservations || []);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cargar reservas:', error);
+        this.alertService.show('Error al cargar reservas de inventario', 'error', 3000);
       }
     });
   }
@@ -283,7 +273,6 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     this.movementQuantity.set(0);
     this.movementNote.set('');
     this.movementErrorMessage.set('');
-    this.historyMode.set(false);
     this.movementDrawerOpen.set(true);
   }
 
@@ -297,19 +286,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     this.movementQuantity.set(0);
     this.movementNote.set('');
     this.movementErrorMessage.set('');
-    this.historyMode.set(false);
     this.movementDrawerOpen.set(true);
-  }
-
-  openHistoryDrawer(inventory?: Inventory) {
-    this.blurActiveElement();
-    this.selectedInventory.set(inventory ?? null);
-    this.movementErrorMessage.set('');
-    this.historyMode.set(true);
-    this.movementDrawerOpen.set(true);
-    if (!this.movementsData().length) {
-      this.loadMovements();
-    }
   }
 
   private blurActiveElement() {
@@ -325,13 +302,24 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/transfers']);
   }
 
+  openMovementsPage(inventory?: Inventory) {
+    const inventoryId = Number(inventory?.id || 0);
+    const queryParams = Number.isInteger(inventoryId) && inventoryId > 0 ? { inventoryId } : undefined;
+    this.router.navigate(['/admin/inventory/movements'], queryParams ? { queryParams } : undefined);
+  }
+
+  openTraceabilityPage(inventory?: Inventory) {
+    const inventoryId = Number(inventory?.id || 0);
+    const queryParams = Number.isInteger(inventoryId) && inventoryId > 0 ? { inventoryId } : undefined;
+    this.router.navigate(['/admin/inventory/traceability'], queryParams ? { queryParams } : undefined);
+  }
+
   closeMovementDrawer() {
     this.movementDrawerOpen.set(false);
     this.selectedInventory.set(null);
     this.movementStoreId.set(null);
     this.movementVariantId.set(null);
     this.movementVariantSearch.set('');
-    this.historyMode.set(false);
     this.movementErrorMessage.set('');
   }
 
@@ -359,7 +347,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
         this.resetMovementForm();
         this.closeMovementDrawer();
         this.loadInventories();
-        this.loadMovements();
+        this.loadReservations();
       },
       error: (error: unknown) => {
         const message = this.getErrorMessage(error, 'Error al registrar movimiento');
@@ -432,7 +420,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
 
   refresh() {
     this.loadInventories();
-    this.loadMovements();
+    this.loadReservations();
   }
 
   onSearch(param: string) {
@@ -489,34 +477,73 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     return item.stock - item.reservedStock;
   }
 
-  getMovementActionLabel(movement: any): string {
-    const actionByType: Record<string, string> = {
-      IN: 'Ingreso',
-      OUT: 'Salida',
-      ADJUSTMENT: 'Ajuste',
-      TRANSFER_OUT: 'Transferencia salida',
-      TRANSFER_IN: 'Transferencia ingreso',
-      RESERVED: 'Comprometido',
-      UNRESERVED: 'Liberado',
-    };
-
-    return actionByType[movement?.type] ?? movement?.type ?? '-';
+  getTrackedReservedStock(item: Inventory) {
+    return this.reservationsData()
+      .filter((reservation) => reservation.inventoryId === item.id && reservation.status === 'ACTIVE')
+      .reduce((sum, reservation) => sum + Number(reservation.quantity || 0), 0);
   }
 
-  getMovementCommittedProduct(movement: any): string {
-    const variant = movement?.inventory?.variant;
-    const productName = variant?.product?.name;
-    const sku = variant?.sku;
-
-    if (!productName && !sku) {
-      return '-';
-    }
-
-    if (productName && sku) {
-      return `${productName} - ${sku}`;
-    }
-
-    return productName || sku || '-';
+  getTrackedReservedOrdersCount(item: Inventory) {
+    const orderIds = new Set<number>();
+    this.reservationsData()
+      .filter((reservation) => reservation.inventoryId === item.id && reservation.status === 'ACTIVE')
+      .forEach((reservation) => {
+        const orderId = Number(reservation.orderId || 0);
+        if (orderId > 0) {
+          orderIds.add(orderId);
+        }
+      });
+    return orderIds.size;
   }
+
+  hasReservedMismatch(item: Inventory) {
+    return Number(item.reservedStock || 0) !== this.getTrackedReservedStock(item);
+  }
+
+  reconcileReservedStock(item?: Inventory) {
+    if (this.reconcilingReserved()) {
+      return;
+    }
+
+    const targetIds = item
+      ? [item.id]
+      : this.ListaInventarios()
+        .filter((inventoryItem) => this.hasReservedMismatch(inventoryItem))
+        .map((inventoryItem) => inventoryItem.id);
+
+    if (targetIds.length === 0) {
+      this.alertService.show('No hay descuadres de reservados para reconciliar.', 'info', 3000);
+      return;
+    }
+
+    const actionLabel = item ? 'esta variante' : `${targetIds.length} inventario(s)`;
+    const confirmed = window.confirm(`Se reconciliara el reservado de ${actionLabel}. Deseas continuar?`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.reconcilingReserved.set(true);
+    this.inventoryService.reconcileReservedStock(targetIds).subscribe({
+      next: (result) => {
+        const adjusted = Number(result?.adjustedCount || 0);
+        const unchanged = Number(result?.unchangedCount || 0);
+        this.alertService.show(
+          `Reconciliacion completada: ${adjusted} ajustado(s), ${unchanged} sin cambios.`,
+          'success',
+          3500
+        );
+        this.loadInventories();
+        this.loadReservations();
+      },
+      error: (error: unknown) => {
+        const message = this.getErrorMessage(error, 'Error al reconciliar reservados');
+        this.alertService.show(message, 'error', 3500);
+      },
+      complete: () => {
+        this.reconcilingReserved.set(false);
+      }
+    });
+  }
+
 }
 

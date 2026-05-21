@@ -1,7 +1,18 @@
-import { Injectable } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
+
+export type AuthUser = {
+  id?: number | string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: string | { name?: string | null } | null;
+  permissions?: string[];
+  [key: string]: unknown;
+};
 
 @Injectable({
   providedIn: 'root'
@@ -10,48 +21,61 @@ export class AuthService {
   private static readonly TOKEN_KEY = 'token';
   private static readonly USER_KEY = 'user';
 
-  private currentUserSubject = new BehaviorSubject<any>(null);
-  public currentUser$ = this.currentUserSubject.asObservable();
+  private readonly tokenState = signal<string | null>(null);
+  private readonly currentUserState = signal<AuthUser | null>(null);
+
+  readonly token = this.tokenState.asReadonly();
+  readonly currentUser = this.currentUserState.asReadonly();
+  readonly currentUser$ = toObservable(this.currentUser);
+  readonly currentUserRole = computed(() => {
+    const user = this.currentUser();
+    const rawRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
+    return String(rawRole || '').trim().toUpperCase();
+  });
+  readonly authenticated = computed(() => !!this.token());
 
   constructor(private http: HttpClient, private router: Router) {
     const token = localStorage.getItem(AuthService.TOKEN_KEY);
-    const user = localStorage.getItem(AuthService.USER_KEY);
+    const user = this.parseStoredUser(localStorage.getItem(AuthService.USER_KEY));
 
     if (token && !this.isTokenExpired(token) && user) {
-      this.currentUserSubject.next(JSON.parse(user));
+      this.tokenState.set(token);
+      this.currentUserState.set(user);
     } else {
       this.clearSession();
     }
   }
 
-  login(email: string, password: string): Observable<any> {
-    return this.http.post('http://localhost:3000/api/auth/login', { email, password });
+  login(email: string, password: string): Observable<{ token: string; user: AuthUser }> {
+    return this.http.post<{ token: string; user: AuthUser }>('http://localhost:3000/api/auth/login', { email, password });
   }
 
   logout(): void {
-    this.http.post('http://localhost:3000/api/auth/logout', {}).subscribe({
-      error: () => {
-        // Ignore logout errors, still clear session.
-      }
-    });
+    this.http
+      .post('http://localhost:3000/api/auth/logout', {})
+      .pipe(catchError(() => of(null)))
+      .subscribe();
+
     this.clearSession();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 
   clearSession(): void {
     localStorage.removeItem(AuthService.TOKEN_KEY);
     localStorage.removeItem(AuthService.USER_KEY);
-    this.currentUserSubject.next(null);
+    this.tokenState.set(null);
+    this.currentUserState.set(null);
   }
 
-  setSession(token: string, user: any): void {
+  setSession(token: string, user: AuthUser): void {
     localStorage.setItem(AuthService.TOKEN_KEY, token);
     localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
-    this.currentUserSubject.next(user);
+    this.tokenState.set(token);
+    this.currentUserState.set(user);
   }
 
   getToken(): string | null {
-    const token = localStorage.getItem(AuthService.TOKEN_KEY);
+    const token = this.tokenState() ?? localStorage.getItem(AuthService.TOKEN_KEY);
     if (!token) {
       return null;
     }
@@ -61,25 +85,27 @@ export class AuthService {
       return null;
     }
 
+    if (!this.tokenState()) {
+      this.tokenState.set(token);
+    }
+
     return token;
   }
 
-  getCurrentUser(): any {
-    return this.currentUserSubject.value;
+  getCurrentUser(): AuthUser | null {
+    return this.currentUser();
   }
 
   getCurrentUserRole(): string {
-    const user = this.getCurrentUser();
-    const rawRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
-    return String(rawRole || '').trim().toUpperCase();
+    return this.currentUserRole();
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return this.authenticated() && !!this.getToken();
   }
 
   hasRole(role: string): boolean {
-    const currentRole = this.getCurrentUserRole();
+    const currentRole = this.currentUserRole();
     return currentRole === String(role || '').trim().toUpperCase();
   }
 
@@ -103,5 +129,17 @@ export class AuthService {
       return true;
     }
     return Date.now() >= payload.exp * 1000;
+  }
+
+  private parseStoredUser(rawUser: string | null): AuthUser | null {
+    if (!rawUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawUser) as AuthUser;
+    } catch {
+      return null;
+    }
   }
 }

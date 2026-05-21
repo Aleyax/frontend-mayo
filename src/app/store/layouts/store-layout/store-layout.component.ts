@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 import { MarketplaceAuthService } from '../../services/marketplace-auth.service';
 
 @Component({
@@ -11,44 +12,57 @@ import { MarketplaceAuthService } from '../../services/marketplace-auth.service'
   styleUrls: ['./store-layout.component.css'],
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive]
 })
-export class StoreLayoutComponent implements OnInit {
+export class StoreLayoutComponent {
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
-  currentTheme: 'dark' | 'light' = 'dark';
-  readonly marketplaceUser = toSignal(
-    this.marketplaceAuthService.currentUser$,
-    { initialValue: this.marketplaceAuthService.getCurrentUser() },
-  );
 
-  ngOnInit(): void {
-    const savedTheme = localStorage.getItem('theme');
-    this.currentTheme = savedTheme === 'light' ? 'light' : 'dark';
-    this.applyTheme();
-    this.hydrateMarketplaceSession();
+  readonly currentTheme = signal<'dark' | 'light'>(this.getSavedTheme());
+  readonly marketplaceUser = this.marketplaceAuthService.currentUser;
+
+  // Refreshes marketplace session declaratively when a persisted token exists.
+  private readonly sessionResource = rxResource<boolean, true | undefined>({
+    params: () => (this.marketplaceAuthService.isAuthenticated() ? true : undefined),
+    stream: ({ params }) => {
+      if (!params) {
+        return of(true);
+      }
+
+      return this.marketplaceAuthService.me().pipe(
+        map(() => true),
+        catchError(() => {
+          this.marketplaceAuthService.logout();
+          return of(false);
+        }),
+      );
+    },
+    defaultValue: true,
+  });
+
+  constructor() {
+    effect(() => {
+      this.applyTheme(this.currentTheme());
+    });
+
+    effect(() => {
+      this.sessionResource.value();
+    });
   }
 
   toggleTheme(): void {
-    this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('theme', this.currentTheme);
-    this.applyTheme();
+    const nextTheme = this.currentTheme() === 'dark' ? 'light' : 'dark';
+    this.currentTheme.set(nextTheme);
+    localStorage.setItem('theme', nextTheme);
   }
 
-  private applyTheme(): void {
-    document.documentElement.setAttribute('data-theme', this.currentTheme);
+  private applyTheme(theme: 'dark' | 'light'): void {
+    document.documentElement.setAttribute('data-theme', theme);
   }
 
   logoutMarketplace() {
     this.marketplaceAuthService.logout();
   }
 
-  private hydrateMarketplaceSession() {
-    if (!this.marketplaceAuthService.isAuthenticated()) {
-      return;
-    }
-
-    this.marketplaceAuthService.me().subscribe({
-      error: () => {
-        this.marketplaceAuthService.logout();
-      },
-    });
+  private getSavedTheme(): 'dark' | 'light' {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'light' ? 'light' : 'dark';
   }
 }

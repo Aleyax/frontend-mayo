@@ -5,7 +5,11 @@
       <nav>
         <a routerLink="/marketplace" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">Catalogo</a>
         <a routerLink="/marketplace/cart" routerLinkActive="active-link">Carrito</a>
-        <a routerLink="/marketplace/track-order" routerLinkActive="active-link">Seguimiento</a>
+        @if (marketplaceUser()) {
+          <a routerLink="/marketplace/account" routerLinkActive="active-link">Mis pedidos</a>
+        } @else {
+          <a routerLink="/marketplace/track-order" routerLinkActive="active-link">Seguimiento</a>
+        }
       </nav>
       @if (marketplaceUser(); as user) {
         <div class="mk-account-pill">
@@ -20,12 +24,12 @@
       <button
         type="button"
         class="theme-toggle"
-        [attr.aria-label]="currentTheme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
-        [attr.title]="currentTheme === 'dark' ? 'Tema oscuro' : 'Tema claro'"
+        [attr.aria-label]="currentTheme() === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        [attr.title]="currentTheme() === 'dark' ? 'Tema oscuro' : 'Tema claro'"
         (click)="toggleTheme()"
       >
         <span class="theme-toggle-track">
-          <span class="theme-toggle-thumb">{{ currentTheme === 'dark' ? 'Oscuro' : 'Claro' }}</span>
+          <span class="theme-toggle-thumb">{{ currentTheme() === 'dark' ? 'Oscuro' : 'Claro' }}</span>
         </span>
       </button>
     </div>
