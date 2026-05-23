@@ -19,10 +19,14 @@ export class SystemSettingsPageComponent implements OnInit {
   saving = signal(false);
   returnResponsibilityManagementEnabled = signal(true);
   initialReturnResponsibilityManagementEnabled = signal(true);
+  pickingResponsibilityFlowEnabled = signal(false);
+  initialPickingResponsibilityFlowEnabled = signal(false);
   marketplacePaymentMethodsEnabled = signal(false);
   initialMarketplacePaymentMethodsEnabled = signal(false);
   marketplacePaymentMethodIds = signal<number[]>([]);
   initialMarketplacePaymentMethodIds = signal<number[]>([]);
+  marketplaceIncludeIgv = signal(true);
+  initialMarketplaceIncludeIgv = signal(true);
   paymentMethods = signal<PaymentMethod[]>([]);
 
   constructor(
@@ -38,7 +42,9 @@ export class SystemSettingsPageComponent implements OnInit {
 
   get hasChanges(): boolean {
     return this.returnResponsibilityManagementEnabled() !== this.initialReturnResponsibilityManagementEnabled()
+      || this.pickingResponsibilityFlowEnabled() !== this.initialPickingResponsibilityFlowEnabled()
       || this.marketplacePaymentMethodsEnabled() !== this.initialMarketplacePaymentMethodsEnabled()
+      || this.marketplaceIncludeIgv() !== this.initialMarketplaceIncludeIgv()
       || !this.areNumberArraysEqual(
         this.marketplacePaymentMethodIds(),
         this.initialMarketplacePaymentMethodIds(),
@@ -49,8 +55,16 @@ export class SystemSettingsPageComponent implements OnInit {
     this.returnResponsibilityManagementEnabled.set(checked);
   }
 
+  onTogglePickingResponsibilityFlow(checked: boolean) {
+    this.pickingResponsibilityFlowEnabled.set(checked);
+  }
+
   onToggleMarketplacePayments(checked: boolean) {
     this.marketplacePaymentMethodsEnabled.set(checked);
+  }
+
+  onToggleMarketplaceIgv(checked: boolean) {
+    this.marketplaceIncludeIgv.set(checked);
   }
 
   isPaymentMethodSelected(paymentMethodId: number): boolean {
@@ -74,8 +88,10 @@ export class SystemSettingsPageComponent implements OnInit {
 
   resetChanges() {
     this.returnResponsibilityManagementEnabled.set(this.initialReturnResponsibilityManagementEnabled());
+    this.pickingResponsibilityFlowEnabled.set(this.initialPickingResponsibilityFlowEnabled());
     this.marketplacePaymentMethodsEnabled.set(this.initialMarketplacePaymentMethodsEnabled());
     this.marketplacePaymentMethodIds.set([...this.initialMarketplacePaymentMethodIds()]);
+    this.marketplaceIncludeIgv.set(this.initialMarketplaceIncludeIgv());
   }
 
   saveSettings() {
@@ -91,20 +107,28 @@ export class SystemSettingsPageComponent implements OnInit {
     this.systemConfigService
       .updateOrderWorkflowSettings({
         returnResponsibilityManagementEnabled: this.returnResponsibilityManagementEnabled(),
+        pickingResponsibilityFlowEnabled: this.pickingResponsibilityFlowEnabled(),
         marketplacePaymentMethodsEnabled: this.marketplacePaymentMethodsEnabled(),
         marketplacePaymentMethodIds: this.marketplacePaymentMethodIds(),
+        marketplaceIncludeIgv: this.marketplaceIncludeIgv(),
       })
       .subscribe({
         next: (settings) => {
           const enabled = settings.returnResponsibilityManagementEnabled !== false;
+          const pickingResponsibilityFlowEnabled = settings.pickingResponsibilityFlowEnabled === true;
           const marketplaceEnabled = settings.marketplacePaymentMethodsEnabled === true;
           const paymentMethodIds = this.sanitizeAllowedPaymentMethodIds(settings.marketplacePaymentMethodIds);
+          const marketplaceIncludeIgv = settings.marketplaceIncludeIgv !== false;
           this.initialReturnResponsibilityManagementEnabled.set(enabled);
           this.returnResponsibilityManagementEnabled.set(enabled);
+          this.initialPickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
+          this.pickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
           this.initialMarketplacePaymentMethodsEnabled.set(marketplaceEnabled);
           this.marketplacePaymentMethodsEnabled.set(marketplaceEnabled);
           this.initialMarketplacePaymentMethodIds.set([...paymentMethodIds]);
           this.marketplacePaymentMethodIds.set([...paymentMethodIds]);
+          this.initialMarketplaceIncludeIgv.set(marketplaceIncludeIgv);
+          this.marketplaceIncludeIgv.set(marketplaceIncludeIgv);
           this.saving.set(false);
           this.alertService.show('Configuracion guardada', 'success', 2500);
         },
@@ -121,14 +145,20 @@ export class SystemSettingsPageComponent implements OnInit {
     this.systemConfigService.getOrderWorkflowSettings().subscribe({
       next: (settings) => {
         const enabled = settings.returnResponsibilityManagementEnabled !== false;
+        const pickingResponsibilityFlowEnabled = settings.pickingResponsibilityFlowEnabled === true;
         const marketplaceEnabled = settings.marketplacePaymentMethodsEnabled === true;
         const paymentMethodIds = this.sanitizeAllowedPaymentMethodIds(settings.marketplacePaymentMethodIds);
+        const marketplaceIncludeIgv = settings.marketplaceIncludeIgv !== false;
         this.initialReturnResponsibilityManagementEnabled.set(enabled);
         this.returnResponsibilityManagementEnabled.set(enabled);
+        this.initialPickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
+        this.pickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
         this.initialMarketplacePaymentMethodsEnabled.set(marketplaceEnabled);
         this.marketplacePaymentMethodsEnabled.set(marketplaceEnabled);
         this.initialMarketplacePaymentMethodIds.set([...paymentMethodIds]);
         this.marketplacePaymentMethodIds.set([...paymentMethodIds]);
+        this.initialMarketplaceIncludeIgv.set(marketplaceIncludeIgv);
+        this.marketplaceIncludeIgv.set(marketplaceIncludeIgv);
         this.loading.set(false);
       },
       error: (error) => {

@@ -9,6 +9,7 @@ import { OrderConfirmationComponent } from "./pages/order-confirmation/order-con
 import { TrackOrderComponent } from "./pages/track-order/track-order.component";
 import { MarketplaceAuthComponent } from "./pages/marketplace-auth/marketplace-auth.component";
 import { AccountDashboardComponent } from "./pages/account-dashboard/account-dashboard.component";
+import { MarketplaceAuthGuard } from "./guards/marketplace-auth.guard";
 
 export const storeRoutes : Routes = [
   {
@@ -43,6 +44,7 @@ export const storeRoutes : Routes = [
       },
       {
         path: 'marketplace/account',
+        canActivate: [MarketplaceAuthGuard],
         component: AccountDashboardComponent
       },
       {

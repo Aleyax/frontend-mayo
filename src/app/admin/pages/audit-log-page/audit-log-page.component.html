@@ -1,0 +1,227 @@
+<div class="audit-log-page">
+  <section class="audit-header">
+    <div>
+      <p class="audit-kicker">Seguridad y control</p>
+      <h1 class="audit-title">Bitacora global de trazabilidad</h1>
+      <p class="audit-subtitle">
+        Registro centralizado de peticiones API para seguimiento operativo y auditoria.
+      </p>
+    </div>
+    <div class="audit-header-actions">
+      <button type="button" class="btn btn-outline btn-sm" (click)="refresh()" [disabled]="loading()">
+        Actualizar
+      </button>
+    </div>
+  </section>
+
+  <section class="audit-filters">
+    <div class="audit-filters-grid">
+      <label class="form-control">
+        <span class="label-text">Buscar</span>
+        <input
+          type="text"
+          class="input input-sm w-full"
+          [value]="search()"
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Ruta, metodo, correo o rol"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Metodo</span>
+        <select class="select select-sm w-full" [value]="method()" (change)="onMethodChange($any($event.target).value)">
+          <option value="">Todos</option>
+          @for (item of availableMethods; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Status HTTP</span>
+        <input
+          type="number"
+          min="100"
+          max="599"
+          class="input input-sm w-full"
+          [value]="statusCode()"
+          (input)="onStatusCodeChange($any($event.target).value)"
+          placeholder="200"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Usuario ID</span>
+        <input
+          type="number"
+          min="1"
+          class="input input-sm w-full"
+          [value]="actorUserId()"
+          (input)="onActorUserIdChange($any($event.target).value)"
+          placeholder="Ej. 15"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Ruta API</span>
+        <input
+          type="text"
+          class="input input-sm w-full"
+          [value]="path()"
+          (input)="onPathChange($any($event.target).value)"
+          placeholder="/api/orders"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Desde</span>
+        <input
+          type="date"
+          class="input input-sm w-full"
+          [value]="startDate()"
+          (change)="onStartDateChange($any($event.target).value)"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Hasta</span>
+        <input
+          type="date"
+          class="input input-sm w-full"
+          [value]="endDate()"
+          (change)="onEndDateChange($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    <div class="audit-filter-actions">
+      <button type="button" class="btn btn-primary btn-sm" (click)="applyFilters()" [disabled]="loading()">
+        Filtrar
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" (click)="clearFilters()" [disabled]="loading()">
+        Limpiar
+      </button>
+    </div>
+  </section>
+
+  <section class="audit-summary">
+    Mostrando <strong>{{ fromItem }}</strong> a <strong>{{ toItem }}</strong> de <strong>{{ total() }}</strong> registros.
+  </section>
+
+  <section class="audit-table-wrapper">
+    <table class="table table-zebra w-full">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Metodo</th>
+          <th>Ruta</th>
+          <th>Estado</th>
+          <th>Duracion</th>
+          <th>IP</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="10" class="text-center py-8 text-sm text-gray-500">Cargando trazabilidad global...</td>
+          </tr>
+        } @else if (logs().length === 0) {
+          <tr>
+            <td colspan="10" class="text-center py-8 text-sm text-gray-500">No hay registros para los filtros aplicados.</td>
+          </tr>
+        } @else {
+          @for (log of logs(); track log.id) {
+            <tr>
+              <td>{{ log.id }}</td>
+              <td>{{ log.createdAt | date:'short' }}</td>
+              <td>{{ getActorLabel(log) }}</td>
+              <td>{{ log.actor.role || '-' }}</td>
+              <td><span class="badge badge-neutral">{{ log.request.method }}</span></td>
+              <td class="audit-path-cell">{{ log.request.path }}</td>
+              <td><span [class]="getStatusClass(log.response.statusCode)">{{ log.response.statusCode }}</span></td>
+              <td>{{ log.response.durationMs }} ms</td>
+              <td>{{ log.context.ipAddress || '-' }}</td>
+              <td>
+                <button type="button" class="btn btn-ghost btn-xs" (click)="openDetail(log)">
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="audit-pagination">
+    <button type="button" class="btn btn-outline btn-sm" (click)="goPreviousPage()" [disabled]="loading() || page() <= 1">
+      Anterior
+    </button>
+    <span>Pagina {{ page() }} de {{ totalPages() || 1 }}</span>
+    <button
+      type="button"
+      class="btn btn-outline btn-sm"
+      (click)="goNextPage()"
+      [disabled]="loading() || page() >= totalPages()"
+    >
+      Siguiente
+    </button>
+  </section>
+
+  @if (selectedLog(); as logDetail) {
+    <div class="fixed inset-0 z-40 bg-black/40" (click)="closeDetail()"></div>
+    <section class="audit-details-modal fixed inset-x-2 top-4 z-50 mx-auto max-h-[92vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="audit-details-header">
+        <div>
+          <h2 class="text-lg font-bold">Detalle de registro #{{ logDetail.id }}</h2>
+          <p class="text-sm text-gray-500">{{ logDetail.createdAt | date:'medium' }}</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="closeDetail()">Cerrar</button>
+      </div>
+
+      <div class="audit-details-grid">
+        <div>
+          <p class="audit-details-label">Actor</p>
+          <p><strong>Usuario:</strong> {{ getActorLabel(logDetail) }}</p>
+          <p><strong>Rol:</strong> {{ logDetail.actor.role || '-' }}</p>
+          <p><strong>IP:</strong> {{ logDetail.context.ipAddress || '-' }}</p>
+          <p><strong>User-Agent:</strong> {{ logDetail.context.userAgent || '-' }}</p>
+        </div>
+
+        <div>
+          <p class="audit-details-label">Request</p>
+          <p><strong>Metodo:</strong> {{ logDetail.request.method }}</p>
+          <p><strong>Ruta:</strong> {{ logDetail.request.path }}</p>
+          <p><strong>Status:</strong> {{ logDetail.response.statusCode }}</p>
+          <p><strong>Duracion:</strong> {{ logDetail.response.durationMs }} ms</p>
+        </div>
+      </div>
+
+      <div class="audit-details-payload">
+        <h3 class="font-semibold">Payload de la solicitud</h3>
+        <div class="audit-payload-list">
+          <article class="audit-payload-card">
+            <p class="audit-payload-title">Query</p>
+            <pre>{{ formatJson(logDetail.request.query) }}</pre>
+          </article>
+
+          <article class="audit-payload-card">
+            <p class="audit-payload-title">Params</p>
+            <pre>{{ formatJson(logDetail.request.params) }}</pre>
+          </article>
+
+          <article class="audit-payload-card">
+            <p class="audit-payload-title">Body</p>
+            <pre>{{ formatJson(logDetail.request.body) }}</pre>
+          </article>
+        </div>
+      </div>
+    </section>
+  }
+
+  <app-alert></app-alert>
+</div>

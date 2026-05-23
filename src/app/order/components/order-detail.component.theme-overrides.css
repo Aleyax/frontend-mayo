@@ -1,0 +1,187 @@
+
+.items-table tbody tr:nth-child(odd),
+.items-table tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--detail-surface) 90%, var(--detail-border)) !important;
+}
+
+.items-table tbody tr:hover {
+  background: color-mix(in oklab, var(--detail-primary) 12%, var(--detail-surface)) !important;
+}
+
+.items-table tbody td {
+  color: var(--detail-muted);
+  background: transparent;
+}
+
+.pick-step-btn,
+.pick-complete-btn {
+  background: var(--detail-surface-soft);
+  border-color: var(--detail-border);
+  color: var(--detail-text);
+}
+
+.pick-step-btn:hover:not(:disabled),
+.pick-complete-btn:hover:not(:disabled) {
+  background: var(--detail-primary);
+  border-color: var(--detail-primary);
+  color: var(--detail-primary-content);
+}
+
+.btn-primary {
+  background: var(--detail-primary);
+  color: var(--detail-primary-content);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.btn-success,
+.badge.picked {
+  background: var(--detail-success);
+}
+
+.info-row.total {
+  border-top-color: var(--detail-primary);
+}
+
+.form-input {
+  background: var(--detail-surface-soft);
+  border-color: var(--detail-border);
+  color: var(--detail-text);
+}
+
+.print-layout-select {
+  background: var(--detail-surface-soft);
+  border-color: var(--detail-border);
+  color: var(--detail-text);
+}
+
+.status-progress-track {
+  background: color-mix(in oklab, var(--detail-border) 75%, var(--detail-surface));
+}
+
+.status-progress-fill {
+  background: var(--detail-primary);
+}
+
+.timeline-dot {
+  background: var(--detail-primary);
+}
+
+.picking-finished-note {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--detail-success) 45%, var(--detail-border));
+  background: color-mix(in oklab, var(--detail-success) 16%, var(--detail-surface));
+  color: color-mix(in oklab, var(--detail-success) 78%, var(--detail-text));
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.refreshing-note {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.85rem;
+  color: var(--detail-muted);
+}
+
+@media (max-width: 900px) {
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .order-detail-container {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  .mobile-table-cards.mobile-only {
+    display: grid !important;
+  }
+
+  .mobile-pick-actions .pick-step-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mobile-pick-actions .pick-complete-btn {
+    flex: 1;
+    min-height: 34px;
+  }
+}
+
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  :host {
+    --detail-bg: #fff;
+  }
+
+  .screen-content {
+    display: none !important;
+  }
+
+  .print-content {
+    display: block !important;
+  }
+
+  .print-sheet {
+    display: none;
+  }
+
+  .print-content.layout-invoice .print-sheet-invoice {
+    display: block;
+  }
+
+  .print-content.layout-ticket .print-sheet-ticket {
+    display: block;
+    width: 72mm;
+    margin: 0 auto;
+    font-size: 0.85rem;
+  }
+
+  .print-content.layout-invoice .print-sheet-invoice {
+    font-size: 0.9rem;
+  }
+
+  .print-sheet-ticket .ticket-header p,
+  .print-sheet-ticket .ticket-client p,
+  .print-sheet-ticket .ticket-footer p {
+    font-size: 0.8rem;
+  }
+
+  .print-sheet-ticket .ticket-item-line,
+  .print-sheet-ticket .ticket-item-name,
+  .print-sheet-ticket .ticket-summary p {
+    font-size: 0.8rem;
+  }
+
+  .order-detail-container {
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    background: #fff;
+  }
+}

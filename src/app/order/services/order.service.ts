@@ -15,6 +15,9 @@ export type OrderStatus =
   | 'WAITING_STOCK';
 
 export type OrderResponsibleRole = 'seller' | 'picker' | 'dispenser';
+export type PickingResponsibilityMode = 'SHARED' | 'TRANSFER';
+export type PickingResponsibilityRequestAction = 'APPROVE' | 'REJECT';
+export type PickingUnpickAction = 'APPROVE' | 'REJECT';
 
 @Injectable({
   providedIn: 'root'
@@ -84,6 +87,25 @@ export class OrderService {
     return this.http.patch(`${this.apiUrl}/picking/items/${itemId}`, { pickedQuantity });
   }
 
+  requestPickingUnpickAction(orderId: number, itemId: number, quantity: number, note?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${orderId}/picking/items/${itemId}/unpick-request`, {
+      quantity,
+      note,
+    });
+  }
+
+  resolvePickingUnpickAction(
+    orderId: number,
+    requestId: number,
+    action: PickingUnpickAction,
+    note?: string,
+  ): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${orderId}/picking/unpick-requests/${requestId}`, {
+      action,
+      note,
+    });
+  }
+
   // Completar picking de una orden
   completeOrderPicking(id: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/picking/complete`, {});
@@ -94,6 +116,33 @@ export class OrderService {
     return this.http.patch(`${this.apiUrl}/${id}/assign`, {
       roleType,
       userId
+    });
+  }
+
+  requestPickingResponsibility(id: number, mode: PickingResponsibilityMode = 'SHARED', note?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/picking/responsibility/request`, {
+      mode,
+      note,
+    });
+  }
+
+  delegatePickingResponsibility(id: number, userId: number, mode: PickingResponsibilityMode = 'TRANSFER', note?: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/picking/responsibility/delegate`, {
+      userId,
+      mode,
+      note,
+    });
+  }
+
+  resolvePickingResponsibilityRequest(
+    id: number,
+    requestId: number,
+    action: PickingResponsibilityRequestAction,
+    note?: string,
+  ): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/picking/responsibility/requests/${requestId}`, {
+      action,
+      note,
     });
   }
 

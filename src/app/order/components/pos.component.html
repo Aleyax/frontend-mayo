@@ -116,7 +116,7 @@
 
     @if (cart.length > 0) {
       <div class="cart-items">
-        @for (item of cart; track item.variantId ?? item.productId ?? $index; let i = $index) {
+        @for (item of cart; track getCartItemTrackKey(item, $index); let i = $index) {
           <article class="cart-item">
             <div class="item-image">
               @if (item.imageUrl) {
@@ -158,8 +158,12 @@
         <span>Subtotal</span>
         <span>S/ {{ subtotal | number: "1.2-2" }}</span>
       </div>
+      <label class="igv-toggle-row">
+        <span>Aplicar IGV (18%)</span>
+        <input type="checkbox" [checked]="applyIgv" (change)="toggleIgvApplication($event.target.checked)" />
+      </label>
       <div class="summary-row">
-        <span>IGV (18%)</span>
+        <span>{{ applyIgv ? 'IGV (18%)' : 'IGV (no incluido)' }}</span>
         <span>S/ {{ tax | number: "1.2-2" }}</span>
       </div>
       <div class="summary-row total">
@@ -321,8 +325,8 @@
               <input
                 id="variantQuantity"
                 type="number"
-                min="1"
-                [max]="selectedVariant?.availableStock || 1"
+                min="0"
+                [max]="getSelectedVariantMaxQuantity()"
                 [ngModel]="variantQuantity"
                 (ngModelChange)="setVariantQuantity($event)"
               />
@@ -385,6 +389,16 @@
         </div>
 
         <form [formGroup]="paymentForm" class="payment-form">
+          <div class="form-group igv-toggle-group">
+            <label for="applyIgvToggle">Aplicar IGV en esta venta</label>
+            <input
+              id="applyIgvToggle"
+              type="checkbox"
+              [checked]="applyIgv"
+              (change)="toggleIgvApplication($event.target.checked)"
+            />
+          </div>
+
           <div class="form-group">
             <label>Total a cobrar</label>
             <div class="amount-display">S/ {{ total | number: "1.2-2" }}</div>

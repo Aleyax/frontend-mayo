@@ -1,0 +1,233 @@
+<div class="user-activity-page">
+  <section class="activity-header">
+    <div>
+      <p class="activity-kicker">Auditoria operativa</p>
+      <h1 class="activity-title">Movimientos de usuarios</h1>
+      <p class="activity-subtitle">
+        Seguimiento de acciones por usuario: inventario, picking, traslados, POS y ordenes.
+      </p>
+    </div>
+    <div class="activity-header-actions">
+      <button type="button" class="btn btn-outline btn-sm" (click)="refresh()" [disabled]="loading()">
+        Actualizar
+      </button>
+    </div>
+  </section>
+
+  <section class="activity-filters">
+    <div class="activity-filters-grid">
+      <label class="form-control">
+        <span class="label-text">Buscar</span>
+        <input
+          type="text"
+          class="input input-sm w-full"
+          [value]="search()"
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Usuario, accion, entidad o detalle"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Usuario ID</span>
+        <input
+          type="number"
+          min="1"
+          class="input input-sm w-full"
+          [value]="userId()"
+          (input)="onUserIdChange($any($event.target).value)"
+          placeholder="Ej. 7"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Modulo</span>
+        <select class="select select-sm w-full" [value]="module()" (change)="onModuleChange($any($event.target).value)">
+          <option value="">Todos</option>
+          @for (moduleItem of moduleOptions; track moduleItem) {
+            <option [value]="moduleItem">{{ moduleItem }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Tipo de accion</span>
+        <input
+          type="text"
+          class="input input-sm w-full"
+          [value]="actionType()"
+          (input)="onActionTypeChange($any($event.target).value)"
+          placeholder="PICKING_COMPLETED"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Tipo de entidad</span>
+        <input
+          type="text"
+          class="input input-sm w-full"
+          [value]="entityType()"
+          (input)="onEntityTypeChange($any($event.target).value)"
+          placeholder="ORDER, TRANSFER, ..."
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Desde</span>
+        <input
+          type="date"
+          class="input input-sm w-full"
+          [value]="startDate()"
+          (change)="onStartDateChange($any($event.target).value)"
+        />
+      </label>
+
+      <label class="form-control">
+        <span class="label-text">Hasta</span>
+        <input
+          type="date"
+          class="input input-sm w-full"
+          [value]="endDate()"
+          (change)="onEndDateChange($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    <div class="activity-filter-actions">
+      <button type="button" class="btn btn-primary btn-sm" (click)="applyFilters()" [disabled]="loading()">
+        Filtrar
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" (click)="clearFilters()" [disabled]="loading()">
+        Limpiar
+      </button>
+    </div>
+  </section>
+
+  <section class="activity-summary">
+    Mostrando <strong>{{ fromItem }}</strong> a <strong>{{ toItem }}</strong> de <strong>{{ total() }}</strong> movimientos.
+  </section>
+
+  <section class="activity-table-wrapper">
+    <table class="table table-zebra w-full">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Modulo</th>
+          <th>Accion</th>
+          <th>Entidad</th>
+          <th>Productos</th>
+          <th>Detalle</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="9" class="text-center py-8 text-sm text-gray-500">Cargando movimientos...</td>
+          </tr>
+        } @else if (activities().length === 0) {
+          <tr>
+            <td colspan="9" class="text-center py-8 text-sm text-gray-500">No hay movimientos para los filtros aplicados.</td>
+          </tr>
+        } @else {
+          @for (activity of activities(); track activity.id) {
+            <tr>
+              <td>{{ activity.id }}</td>
+              <td>{{ activity.createdAt | date:'short' }}</td>
+              <td>{{ getUserLabel(activity) }}</td>
+              <td><span class="badge badge-outline">{{ activity.module }}</span></td>
+              <td>{{ activity.actionLabel }}</td>
+              <td>{{ getEntityLabel(activity) }}</td>
+              <td>{{ getProductSummary(activity) }}</td>
+              <td>{{ activity.description || '-' }}</td>
+              <td>
+                <button type="button" class="btn btn-ghost btn-xs" (click)="openDetail(activity)">
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="activity-pagination">
+    <button type="button" class="btn btn-outline btn-sm" (click)="goPreviousPage()" [disabled]="loading() || page() <= 1">
+      Anterior
+    </button>
+    <span>Pagina {{ page() }} de {{ totalPages() || 1 }}</span>
+    <button
+      type="button"
+      class="btn btn-outline btn-sm"
+      (click)="goNextPage()"
+      [disabled]="loading() || page() >= totalPages()"
+    >
+      Siguiente
+    </button>
+  </section>
+
+  @if (selectedActivity(); as activityDetail) {
+    <div class="fixed inset-0 z-40 bg-black/40" (click)="closeDetail()"></div>
+    <section class="activity-details-modal fixed inset-x-2 top-4 z-50 mx-auto max-h-[92vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="activity-details-header">
+        <div>
+          <h2 class="text-lg font-bold">Movimiento #{{ activityDetail.id }}</h2>
+          <p class="text-sm text-gray-500">{{ activityDetail.createdAt | date:'medium' }}</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="closeDetail()">Cerrar</button>
+      </div>
+
+      <div class="activity-details-grid">
+        <div>
+          <p class="activity-details-label">Usuario</p>
+          <p>{{ getUserLabel(activityDetail) }}</p>
+          <p>{{ activityDetail.user.role || '-' }}</p>
+        </div>
+        <div>
+          <p class="activity-details-label">Modulo y accion</p>
+          <p><strong>{{ activityDetail.module }}</strong></p>
+          <p>{{ activityDetail.actionLabel }}</p>
+          <p class="text-xs text-gray-500">{{ activityDetail.actionType }}</p>
+        </div>
+        <div>
+          <p class="activity-details-label">Entidad</p>
+          <p>{{ getEntityLabel(activityDetail) }}</p>
+          <p class="text-xs text-gray-500">{{ activityDetail.entity.type }}</p>
+        </div>
+        <div>
+          <p class="activity-details-label">Descripcion</p>
+          <p>{{ activityDetail.description || '-' }}</p>
+        </div>
+      </div>
+
+      <div class="activity-products-block">
+        <h3 class="font-semibold">Productos involucrados</h3>
+        @if ((activityDetail.products || []).length === 0) {
+          <p class="text-sm text-gray-500">No se registraron productos en esta accion.</p>
+        } @else {
+          <div class="activity-product-list">
+            @for (product of activityDetail.products; track product.variantId) {
+              <article class="activity-product-card">
+                <div class="activity-product-text">
+                  <p class="activity-product-name">{{ product.productName || ('Variante #' + product.variantId) }}</p>
+                  <p class="activity-product-meta">{{ product.color || 'Sin color' }} / {{ product.size || 'Sin talla' }}</p>
+                  <p class="activity-product-sku">{{ product.sku || '-' }}</p>
+                </div>
+                <span class="badge badge-primary badge-outline">x{{ product.quantity || 0 }}</span>
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="activity-context-block">
+        <p class="activity-details-label">Contexto tecnico</p>
+        <pre>{{ formatJson(activityDetail.context) }}</pre>
+      </div>
+    </section>
+  }
+
+  <app-alert></app-alert>
+</div>

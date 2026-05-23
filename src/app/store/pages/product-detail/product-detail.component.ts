@@ -13,7 +13,11 @@ import { MarketplaceCartService } from '../../services/marketplace-cart.service'
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './product-detail.component.html',
-  styleUrl: './product-detail.component.css'
+  styleUrls: [
+    './product-detail.component.layout-gallery.css',
+    './product-detail.component.offer-drawer.css',
+    './product-detail.component.drawer-responsive.css',
+  ]
 })
 export class ProductDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

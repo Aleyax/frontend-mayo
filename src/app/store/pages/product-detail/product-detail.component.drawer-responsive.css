@@ -1,0 +1,105 @@
+
+.drawer-item-price {
+  grid-area: price;
+  justify-self: end;
+  font-weight: 700;
+  color: var(--mkd-text);
+}
+
+.qty-stepper {
+  grid-area: stepper;
+  display: grid;
+  grid-template-columns: 34px 52px 34px;
+  gap: 0;
+  align-items: center;
+  border: 1px solid var(--mkd-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.qty-stepper button,
+.qty-stepper input {
+  border: 0;
+  border-radius: 0;
+  color: var(--mkd-text);
+  background: var(--mkd-surface);
+  height: 34px;
+  text-align: center;
+}
+
+.qty-stepper button {
+  background: color-mix(in oklab, var(--mkd-surface) 78%, var(--mkd-text) 22%);
+}
+
+.drawer-empty {
+  border: 1px dashed var(--mkd-border);
+  border-radius: 10px;
+  color: var(--mkd-muted);
+  text-align: center;
+  padding: 1rem;
+}
+
+.drawer-foot {
+  border-top: 1px solid var(--mkd-border);
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.drawer-foot p {
+  margin: 0;
+  color: var(--mkd-muted);
+  font-size: 0.82rem;
+}
+
+.drawer-foot strong {
+  color: var(--mkd-text);
+}
+
+@media (max-width: 1100px) {
+  .mk-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .offer-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .mk-detail-page {
+    padding: 0.7rem;
+  }
+
+  .gallery-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .main-image {
+    height: clamp(300px, 58vh, 560px);
+  }
+
+  .thumb-rail {
+    order: 2;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 0;
+    padding-bottom: 0.1rem;
+  }
+
+  .price-tiers strong {
+    font-size: 1.35rem;
+  }
+
+  .summary-actions {
+    flex-direction: column;
+  }
+
+  .variant-drawer {
+    width: 100vw;
+  }
+}

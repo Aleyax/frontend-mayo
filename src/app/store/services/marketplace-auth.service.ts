@@ -86,29 +86,18 @@ export class MarketplaceAuthService {
   }
 
   isAuthenticated(): boolean {
-    const token = this.getToken();
-    if (!token) {
-      this.clearSession();
-      return false;
-    }
-    return true;
+    return !!this.getToken();
   }
 
   getCurrentUser(): MarketplaceAuthUser | null {
-    return this.currentUser();
+    return this.isAuthenticated() ? this.currentUser() : null;
   }
 
   getToken(): string | null {
-    const token = this.tokenState() ?? localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
+    const token = this.readTokenSnapshot();
     if (!token || this.isTokenExpired(token)) {
-      this.clearSession();
       return null;
     }
-
-    if (!this.tokenState()) {
-      this.tokenState.set(token);
-    }
-
     return token;
   }
 
@@ -167,6 +156,16 @@ export class MarketplaceAuthService {
   private removeStoredSession() {
     localStorage.removeItem(MarketplaceAuthService.TOKEN_KEY);
     localStorage.removeItem(MarketplaceAuthService.USER_KEY);
+  }
+
+  private readTokenSnapshot(): string | null {
+    if (this.tokenState()) {
+      return this.tokenState();
+    }
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
   }
 
   private loadTokenFromStorage(): string | null {

@@ -387,6 +387,57 @@
   @if (can('settings.manage')) {
     <li>
       <a
+        routerLink="/admin/user-activities"
+        routerLinkActive="active"
+        class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+        data-tip="Movimientos de usuarios"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          stroke-width="2"
+          fill="none"
+          stroke="currentColor"
+          class="my-1.5 inline-block size-4"
+        >
+          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z"></path>
+          <path d="M3 21a9 9 0 0 1 18 0"></path>
+          <path d="M17 7l2 2l3-3"></path>
+        </svg>
+        <span class="is-drawer-close:hidden">Mov. usuarios</span>
+      </a>
+    </li>
+
+    <li>
+      <a
+        routerLink="/admin/audit-logs"
+        routerLinkActive="active"
+        class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+        data-tip="Bitacora global"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          stroke-width="2"
+          fill="none"
+          stroke="currentColor"
+          class="my-1.5 inline-block size-4"
+        >
+          <path d="M5 5h14v14H5z"></path>
+          <path d="M8 9h8"></path>
+          <path d="M8 13h8"></path>
+          <path d="M8 17h5"></path>
+        </svg>
+        <span class="is-drawer-close:hidden">Bitacora</span>
+      </a>
+    </li>
+
+    <li>
+      <a
         routerLink="/admin/settings"
         routerLinkActive="active"
         class="is-drawer-close:tooltip is-drawer-close:tooltip-right"

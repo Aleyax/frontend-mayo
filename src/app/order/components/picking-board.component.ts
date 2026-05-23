@@ -1,23 +1,42 @@
-﻿import { Component, OnInit, computed, effect, signal } from '@angular/core';
+﻿import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { catchError, map, of } from 'rxjs';
-import { OrderService } from '../services/order.service';
+import {
+  OrderService,
+  PickingResponsibilityMode,
+  PickingResponsibilityRequestAction,
+  PickingUnpickAction,
+} from '../services/order.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-picking-board',
   templateUrl: './picking-board.component.html',
-  styleUrls: ['./picking-board.component.css'],
+  styleUrls: [
+    './picking-board.component.layout.css',
+    './picking-board.component.item-actions.css',
+    './picking-board.component.theme-overrides.css',
+  ],
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule]
 })
 export class PickingBoardComponent implements OnInit {
+  private readonly mobileBreakpoint = 1024;
   private readonly statusFilter = signal<string>('');
   private readonly selectedOrderId = signal<number | undefined>(undefined);
   private cachedPicking: any | null = null;
   private wasReloadingDetail = false;
+  readonly isMobileView = signal(false);
+  readonly pickingStatusShortcuts = [
+    { value: '', label: 'Todos' },
+    { value: 'CONFIRMED', label: 'Confirmados' },
+    { value: 'WAITING_TRANSFER', label: 'Transferencia' },
+    { value: 'PREPARING', label: 'Preparando' },
+    { value: 'READY', label: 'Listos' }
+  ] as const;
 
   readonly ordersResource = rxResource<any[], string>({
     params: () => this.statusFilter(),
@@ -56,7 +75,12 @@ export class PickingBoardComponent implements OnInit {
     }
   });
 
-  readonly orders = computed<any[]>(() => this.ordersResource.value() || []);
+  readonly orders = computed<any[]>(() =>
+    (this.ordersResource.value() || []).filter((order) => {
+      const normalizedStatus = String(order?.status || '').toUpperCase();
+      return normalizedStatus !== 'DELIVERED' && normalizedStatus !== 'CANCELLED' && normalizedStatus !== 'CANCELED';
+    })
+  );
 
   selectedOrder: any = null;
   filterForm!: FormGroup;
@@ -64,6 +88,12 @@ export class PickingBoardComponent implements OnInit {
   startingPicking = false;
   completingPicking = false;
   updatingItemIds = new Set<number>();
+  requestingResponsibilityMode: PickingResponsibilityMode | null = null;
+  resolvingRequestIds = new Set<number>();
+  requestingUnpickItemIds = new Set<number>();
+  resolvingUnpickRequestIds = new Set<number>();
+  openUnpickRequestItemId: number | null = null;
+  unpickRequestDraftByItemId = new Map<number, { quantity: number; note: string }>();
 
   orderStatusColors: Record<string, string> = {
     CONFIRMED: '#3498db',
@@ -88,7 +118,8 @@ export class PickingBoardComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private orderService: OrderService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private authService: AuthService,
   ) {
     effect(() => {
       const selectedOrderId = this.selectedOrderId();
@@ -131,6 +162,19 @@ export class PickingBoardComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
+    this.syncViewportMode();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.syncViewportMode();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.isMobileView() && this.selectedOrder) {
+      this.clearSelection();
+    }
   }
 
   get loading(): boolean {
@@ -159,6 +203,11 @@ export class PickingBoardComponent implements OnInit {
     return this.pickingResource.isLoading() && !!this.selectedPicking;
   }
 
+  get currentUserId(): number | null {
+    const rawId = Number(this.authService.getCurrentUser()?.id);
+    return Number.isInteger(rawId) && rawId > 0 ? rawId : null;
+  }
+
   initializeForm() {
     this.filterForm = this.fb.group({
       status: ['']
@@ -175,6 +224,10 @@ export class PickingBoardComponent implements OnInit {
 
   startPicking() {
     if (!this.selectedOrder || this.startingPicking) return;
+    if (!this.canCurrentUserOperatePicking()) {
+      this.alertService.show('No tienes responsabilidad asignada para iniciar este picking', 'warning');
+      return;
+    }
 
     this.startingPicking = true;
     this.orderService.startOrderPicking(this.selectedOrder.id).subscribe({
@@ -191,17 +244,34 @@ export class PickingBoardComponent implements OnInit {
   }
 
   markItemPicked(item: any) {
+    if (!this.canCurrentUserOperatePicking()) {
+      this.alertService.show('No tienes responsabilidad asignada para actualizar este picking', 'warning');
+      return;
+    }
     const requested = this.getItemPickLimit(item);
     const current = Number(item?.pickedQuantity || 0);
     this.updateItemPickedQuantity(item, Math.min(requested, current + 1));
   }
 
   markItemUnpicked(item: any) {
+    if (!this.canCurrentUserOperatePicking()) {
+      this.alertService.show('No tienes responsabilidad asignada para actualizar este picking', 'warning');
+      return;
+    }
+    if (this.isPickingResponsibilityFlowEnabled() && !this.canCurrentUserUnpickDirectly(item)) {
+      this.openUnpickRequestForm(item);
+      this.alertService.show('No puedes restar unidades separadas por otro usuario. Usa "Solicitar accion".', 'info');
+      return;
+    }
     const current = Number(item?.pickedQuantity || 0);
     this.updateItemPickedQuantity(item, Math.max(0, current - 1));
   }
 
   markItemComplete(item: any) {
+    if (!this.canCurrentUserOperatePicking()) {
+      this.alertService.show('No tienes responsabilidad asignada para actualizar este picking', 'warning');
+      return;
+    }
     const requested = this.getItemPickLimit(item);
     this.updateItemPickedQuantity(item, requested);
   }
@@ -244,6 +314,10 @@ export class PickingBoardComponent implements OnInit {
 
   completeOrder() {
     if (!this.selectedOrder || !this.selectedPicking?.summary?.completed || this.completingPicking) {
+      return;
+    }
+    if (!this.canCurrentUserOperatePicking()) {
+      this.alertService.show('No tienes responsabilidad asignada para finalizar este picking', 'warning');
       return;
     }
 
@@ -289,6 +363,10 @@ export class PickingBoardComponent implements OnInit {
     const hasSession = !!this.selectedPicking?.pickingSession;
     if (hasSession) return false;
 
+    if (this.isPickingResponsibilityFlowEnabled() && !this.canCurrentUserOperatePicking() && !!this.getPickingPrimaryResponsible()) {
+      return false;
+    }
+
     const status = String(this.selectedPicking?.orderStatus || this.selectedOrder.status || '').toUpperCase();
     return status === 'CONFIRMED' || status === 'WAITING_TRANSFER' || status === 'PREPARING';
   }
@@ -301,6 +379,407 @@ export class PickingBoardComponent implements OnInit {
 
   isItemUpdating(item: any): boolean {
     return this.updatingItemIds.has(Number(item?.pickingItemId || 0));
+  }
+
+  isPickingResponsibilityFlowEnabled(): boolean {
+    return this.selectedPicking?.pickingResponsibility?.enabled === true;
+  }
+
+  getPickingPrimaryResponsible(): any | null {
+    return this.selectedPicking?.pickingResponsibility?.primaryResponsible || null;
+  }
+
+  getPickingPrimaryResponsibleLabel(): string {
+    const primary = this.getPickingPrimaryResponsible();
+    if (!primary) {
+      return this.selectedPicking?.pickingSession?.assignedUser?.firstName
+        || this.selectedOrder?.pickerUser?.firstName
+        || 'No asignado';
+    }
+
+    const firstName = String(primary?.firstName || '').trim();
+    const lastName = String(primary?.lastName || '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
+    return primary?.email || `Usuario #${primary?.id || '-'}`;
+  }
+
+  getSharedResponsibles(): any[] {
+    const shared = this.selectedPicking?.pickingResponsibility?.sharedResponsibles;
+    return Array.isArray(shared) ? shared : [];
+  }
+
+  getPendingResponsibilityRequests(): any[] {
+    const pending = this.selectedPicking?.pickingResponsibility?.pendingRequests;
+    return Array.isArray(pending) ? pending : [];
+  }
+
+  isCurrentUserPrimaryResponsible(): boolean {
+    const currentUserId = this.currentUserId;
+    const primaryUserId = Number(this.getPickingPrimaryResponsible()?.id || 0);
+    return !!currentUserId && currentUserId === primaryUserId;
+  }
+
+  isCurrentUserSharedResponsible(): boolean {
+    const currentUserId = this.currentUserId;
+    if (!currentUserId) {
+      return false;
+    }
+    return this.getSharedResponsibles().some((entry: any) => Number(entry?.user?.id || 0) === currentUserId);
+  }
+
+  canCurrentUserOperatePicking(): boolean {
+    if (!this.isPickingResponsibilityFlowEnabled()) {
+      return true;
+    }
+
+    const currentUserId = this.currentUserId;
+    if (!currentUserId) {
+      return false;
+    }
+
+    const primaryResponsible = this.getPickingPrimaryResponsible();
+    if (!primaryResponsible) {
+      return true;
+    }
+
+    return this.isCurrentUserPrimaryResponsible() || this.isCurrentUserSharedResponsible();
+  }
+
+  getItemContributions(item: any): any[] {
+    const contributions = item?.contributions;
+    return Array.isArray(contributions) ? contributions : [];
+  }
+
+  getPendingUnpickRequests(item: any): any[] {
+    const pending = item?.pendingUnpickRequests;
+    return Array.isArray(pending) ? pending : [];
+  }
+
+  getCurrentUserContribution(item: any): number {
+    const currentUserId = this.currentUserId;
+    if (!currentUserId) {
+      return 0;
+    }
+
+    const own = this.getItemContributions(item).find(
+      (entry: any) => Number(entry?.user?.id || 0) === currentUserId,
+    );
+    return Math.max(0, Number(own?.quantity || 0));
+  }
+
+  getUnpickRequestableQuantity(item: any): number {
+    const pickedQuantity = Math.max(0, Number(item?.pickedQuantity || 0));
+    const ownContribution = this.getCurrentUserContribution(item);
+    return Math.max(0, pickedQuantity - ownContribution);
+  }
+
+  canCurrentUserUnpickDirectly(item: any): boolean {
+    if (!this.isPickingResponsibilityFlowEnabled()) {
+      return true;
+    }
+
+    const contributions = this.getItemContributions(item);
+    if (contributions.length === 0) {
+      return true;
+    }
+
+    return this.getCurrentUserContribution(item) > 0;
+  }
+
+  canShowUnpickRequestButton(item: any): boolean {
+    if (!this.isPickingResponsibilityFlowEnabled() || !this.canCurrentUserOperatePicking()) {
+      return false;
+    }
+    if (Number(item?.pickedQuantity || 0) <= 0) {
+      return false;
+    }
+    return this.getUnpickRequestableQuantity(item) > 0;
+  }
+
+  isUnpickRequestFormOpen(item: any): boolean {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    return Number.isInteger(pickingItemId) && this.openUnpickRequestItemId === pickingItemId;
+  }
+
+  isRequestingUnpickForItem(item: any): boolean {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    return Number.isInteger(pickingItemId) && this.requestingUnpickItemIds.has(pickingItemId);
+  }
+
+  openUnpickRequestForm(item: any) {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (!Number.isInteger(pickingItemId) || pickingItemId < 1 || !this.canShowUnpickRequestButton(item)) {
+      return;
+    }
+
+    const existingDraft = this.unpickRequestDraftByItemId.get(pickingItemId);
+    if (!existingDraft) {
+      this.unpickRequestDraftByItemId.set(pickingItemId, {
+        quantity: Math.max(1, Math.min(this.getUnpickRequestableQuantity(item), 1)),
+        note: '',
+      });
+    } else {
+      existingDraft.quantity = Math.max(1, Math.min(existingDraft.quantity || 1, this.getUnpickRequestableQuantity(item)));
+      this.unpickRequestDraftByItemId.set(pickingItemId, existingDraft);
+    }
+
+    this.openUnpickRequestItemId = pickingItemId;
+  }
+
+  closeUnpickRequestForm(item?: any) {
+    if (!item) {
+      this.openUnpickRequestItemId = null;
+      return;
+    }
+
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (Number.isInteger(pickingItemId) && this.openUnpickRequestItemId === pickingItemId) {
+      this.openUnpickRequestItemId = null;
+    }
+  }
+
+  toggleUnpickRequestForm(item: any) {
+    if (this.isUnpickRequestFormOpen(item)) {
+      this.closeUnpickRequestForm(item);
+      return;
+    }
+    this.openUnpickRequestForm(item);
+  }
+
+  getUnpickRequestDraft(item: any): { quantity: number; note: string } {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    const existingDraft = this.unpickRequestDraftByItemId.get(pickingItemId);
+    if (existingDraft) {
+      return existingDraft;
+    }
+
+    const draft = {
+      quantity: 1,
+      note: '',
+    };
+    this.unpickRequestDraftByItemId.set(pickingItemId, draft);
+    return draft;
+  }
+
+  updateUnpickRequestDraftQuantity(item: any, rawQuantity: string | number) {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (!Number.isInteger(pickingItemId) || pickingItemId < 1) {
+      return;
+    }
+
+    const maxQuantity = this.getUnpickRequestableQuantity(item);
+    const parsedRaw = Number(rawQuantity);
+    const normalizedQuantity = Math.max(1, Math.min(maxQuantity, Number.isFinite(parsedRaw) ? Math.floor(parsedRaw) : 1));
+    const currentDraft = this.getUnpickRequestDraft(item);
+    this.unpickRequestDraftByItemId.set(pickingItemId, {
+      ...currentDraft,
+      quantity: normalizedQuantity,
+    });
+  }
+
+  updateUnpickRequestDraftNote(item: any, note: string) {
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (!Number.isInteger(pickingItemId) || pickingItemId < 1) {
+      return;
+    }
+
+    const currentDraft = this.getUnpickRequestDraft(item);
+    this.unpickRequestDraftByItemId.set(pickingItemId, {
+      ...currentDraft,
+      note: String(note || ''),
+    });
+  }
+
+  canSubmitUnpickRequest(item: any): boolean {
+    if (!this.selectedOrder || !this.canShowUnpickRequestButton(item) || this.isRequestingUnpickForItem(item)) {
+      return false;
+    }
+
+    const draft = this.getUnpickRequestDraft(item);
+    const quantity = Number(draft?.quantity || 0);
+    const maxQuantity = this.getUnpickRequestableQuantity(item);
+    return Number.isInteger(quantity) && quantity > 0 && quantity <= maxQuantity;
+  }
+
+  submitUnpickRequest(item: any) {
+    if (!this.selectedOrder || !this.canSubmitUnpickRequest(item)) {
+      return;
+    }
+
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    const draft = this.getUnpickRequestDraft(item);
+    this.requestingUnpickItemIds.add(pickingItemId);
+    this.orderService.requestPickingUnpickAction(
+      this.selectedOrder.id,
+      pickingItemId,
+      Number(draft.quantity || 0),
+      draft.note || undefined,
+    ).subscribe({
+      next: () => {
+        this.requestingUnpickItemIds.delete(pickingItemId);
+        this.openUnpickRequestItemId = null;
+        this.unpickRequestDraftByItemId.delete(pickingItemId);
+        this.ordersResource.reload();
+        this.pickingResource.reload();
+        this.alertService.show('Solicitud de accion enviada', 'success');
+      },
+      error: (error: any) => {
+        this.requestingUnpickItemIds.delete(pickingItemId);
+        this.alertService.show(error?.error?.error || 'No se pudo enviar la solicitud', 'error');
+      },
+    });
+  }
+
+  isResolvingUnpickRequest(requestId: number): boolean {
+    const normalizedRequestId = Number(requestId);
+    return Number.isInteger(normalizedRequestId) && this.resolvingUnpickRequestIds.has(normalizedRequestId);
+  }
+
+  canResolveUnpickRequest(item: any, request: any): boolean {
+    if (!this.isPickingResponsibilityFlowEnabled()) {
+      return false;
+    }
+    const currentUserId = this.currentUserId;
+    if (!currentUserId) {
+      return false;
+    }
+    const requesterId = Number(request?.requester?.id || 0);
+    if (requesterId === currentUserId) {
+      return false;
+    }
+    if (this.isCurrentUserPrimaryResponsible()) {
+      return true;
+    }
+
+    const ownContribution = this.getCurrentUserContribution(item);
+    const requestedQuantity = Number(request?.quantity || 0);
+    return ownContribution >= requestedQuantity && requestedQuantity > 0;
+  }
+
+  resolveUnpickRequest(item: any, requestId: number, action: PickingUnpickAction) {
+    const normalizedRequestId = Number(requestId);
+    const request = this.getPendingUnpickRequests(item).find((entry: any) => Number(entry?.id || 0) === normalizedRequestId);
+    if (!this.selectedOrder || !request || !this.canResolveUnpickRequest(item, request)) {
+      return;
+    }
+    if (!Number.isInteger(normalizedRequestId) || normalizedRequestId < 1 || this.resolvingUnpickRequestIds.has(normalizedRequestId)) {
+      return;
+    }
+
+    this.resolvingUnpickRequestIds.add(normalizedRequestId);
+    this.orderService.resolvePickingUnpickAction(this.selectedOrder.id, normalizedRequestId, action).subscribe({
+      next: () => {
+        this.resolvingUnpickRequestIds.delete(normalizedRequestId);
+        this.ordersResource.reload();
+        this.pickingResource.reload();
+        this.alertService.show(
+          action === 'APPROVE' ? 'Solicitud de unpick aprobada' : 'Solicitud de unpick rechazada',
+          action === 'APPROVE' ? 'success' : 'info',
+        );
+      },
+      error: (error: any) => {
+        this.resolvingUnpickRequestIds.delete(normalizedRequestId);
+        this.alertService.show(error?.error?.error || 'No se pudo resolver la solicitud', 'error');
+      },
+    });
+  }
+
+  hasPendingRequestByCurrentUser(mode?: PickingResponsibilityMode): boolean {
+    const currentUserId = this.currentUserId;
+    if (!currentUserId) {
+      return false;
+    }
+
+    return this.getPendingResponsibilityRequests().some((request: any) => {
+      const requesterId = Number(request?.requester?.id || 0);
+      const requestMode = String(request?.mode || '').toUpperCase();
+      if (requesterId !== currentUserId) {
+        return false;
+      }
+      if (!mode) {
+        return true;
+      }
+      return requestMode === mode;
+    });
+  }
+
+  canRequestResponsibility(mode: PickingResponsibilityMode): boolean {
+    if (!this.selectedOrder || !this.selectedPicking || this.requestingResponsibilityMode !== null) {
+      return false;
+    }
+    if (!this.isPickingResponsibilityFlowEnabled()) {
+      return false;
+    }
+    if (this.isCurrentUserPrimaryResponsible() || this.isCurrentUserSharedResponsible()) {
+      return false;
+    }
+    if (this.hasPendingRequestByCurrentUser(mode)) {
+      return false;
+    }
+    return true;
+  }
+
+  requestResponsibility(mode: PickingResponsibilityMode) {
+    if (!this.selectedOrder || !this.canRequestResponsibility(mode)) {
+      return;
+    }
+
+    this.requestingResponsibilityMode = mode;
+    this.orderService.requestPickingResponsibility(this.selectedOrder.id, mode).subscribe({
+      next: () => {
+        this.requestingResponsibilityMode = null;
+        this.ordersResource.reload();
+        this.pickingResource.reload();
+        this.alertService.show(
+          mode === 'TRANSFER'
+            ? 'Solicitud para tomar responsabilidad enviada'
+            : 'Solicitud para responsabilidad compartida enviada',
+          'success',
+        );
+      },
+      error: (error: any) => {
+        this.requestingResponsibilityMode = null;
+        this.alertService.show(error?.error?.error || 'No se pudo enviar la solicitud', 'error');
+      },
+    });
+  }
+
+  canResolveResponsibilityRequests(): boolean {
+    return this.isPickingResponsibilityFlowEnabled() && this.isCurrentUserPrimaryResponsible();
+  }
+
+  resolveResponsibilityRequest(requestId: number, action: PickingResponsibilityRequestAction) {
+    if (!this.selectedOrder || !this.canResolveResponsibilityRequests()) {
+      return;
+    }
+
+    const normalizedRequestId = Number(requestId);
+    if (!Number.isInteger(normalizedRequestId) || normalizedRequestId < 1 || this.resolvingRequestIds.has(normalizedRequestId)) {
+      return;
+    }
+
+    this.resolvingRequestIds.add(normalizedRequestId);
+    this.orderService.resolvePickingResponsibilityRequest(this.selectedOrder.id, normalizedRequestId, action).subscribe({
+      next: () => {
+        this.resolvingRequestIds.delete(normalizedRequestId);
+        this.ordersResource.reload();
+        this.pickingResource.reload();
+        this.alertService.show(
+          action === 'APPROVE' ? 'Solicitud aprobada' : 'Solicitud rechazada',
+          action === 'APPROVE' ? 'success' : 'info',
+        );
+      },
+      error: (error: any) => {
+        this.resolvingRequestIds.delete(normalizedRequestId);
+        this.alertService.show(error?.error?.error || 'No se pudo resolver la solicitud', 'error');
+      },
+    });
+  }
+
+  isResolvingResponsibilityRequest(requestId: number): boolean {
+    const normalizedRequestId = Number(requestId);
+    return Number.isInteger(normalizedRequestId) && this.resolvingRequestIds.has(normalizedRequestId);
   }
 
   getItemStatusLabel(status: string): string {
@@ -318,9 +797,25 @@ export class PickingBoardComponent implements OnInit {
   }
 
   onFilterChange() {
-    const status = String(this.filterForm.get('status')?.value || '').trim();
+    const status = String(this.filterForm.get('status')?.value || '').trim().toUpperCase();
     this.statusFilter.set(status);
     this.clearSelection();
+  }
+
+  applyStatusShortcut(status: string) {
+    if (!this.filterForm) {
+      return;
+    }
+    this.filterForm.patchValue({ status });
+    this.onFilterChange();
+  }
+
+  isStatusShortcutActive(status: string): boolean {
+    if (!this.filterForm) {
+      return status === '';
+    }
+    const current = String(this.filterForm.get('status')?.value || '').trim().toUpperCase();
+    return current === String(status || '').trim().toUpperCase();
   }
 
   getStatusColor(status: string): string {
@@ -334,6 +829,20 @@ export class PickingBoardComponent implements OnInit {
   clearSelection() {
     this.selectedOrder = null;
     this.cachedPicking = null;
+    this.requestingResponsibilityMode = null;
+    this.resolvingRequestIds.clear();
+    this.requestingUnpickItemIds.clear();
+    this.resolvingUnpickRequestIds.clear();
+    this.unpickRequestDraftByItemId.clear();
+    this.openUnpickRequestItemId = null;
     this.selectedOrderId.set(undefined);
   }
+
+  private syncViewportMode() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    this.isMobileView.set(window.innerWidth <= this.mobileBreakpoint);
+  }
 }
+

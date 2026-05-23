@@ -57,12 +57,26 @@ interface RemoteStockOption {
   reservedStock: number;
 }
 
+interface CartUpsertResult {
+  success: boolean;
+  message?: string;
+  fulfillmentStoreId?: number | null;
+  fulfillmentStoreName?: string | null;
+}
+
 type ToastType = 'success' | 'error' | 'info';
 
 @Component({
   selector: 'app-pos',
   templateUrl: './pos.component.html',
-  styleUrls: ['./pos.component.css'],
+  styleUrls: [
+    './pos.component.base-catalog.css',
+    './pos.component.cart.css',
+    './pos.component.variant-drawer.css',
+    './pos.component.payment-modal.css',
+    './pos.component.fulfillment-theme.css',
+    './pos.component.theme-overrides.css',
+  ],
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule]
 })
@@ -82,6 +96,7 @@ export class PosComponent implements OnInit {
   tax = 0;
   total = 0;
   readonly taxRate = 0.18;
+  applyIgv = false;
 
   showVariantSelector = false;
   showPaymentDrawer = false;
@@ -92,11 +107,12 @@ export class PosComponent implements OnInit {
   selectedVariant: PosVariant | null = null;
   selectedColor = '';
   selectedSize = '';
-  variantQuantity = 1;
+  variantQuantity = 0;
   remoteStockSuggestions: RemoteStockOption[] = [];
   loadingRemoteStock = false;
   selectedRemoteStoreId: number | null = null;
   remoteFulfillmentStoreId: number | null = null;
+  private drawerQuantityByVariant = new Map<number, number>();
   private remoteStockSuggestionsByVariant = new Map<number, RemoteStockOption[]>();
   private loadingRemoteStockVariantIds = new Set<number>();
 
@@ -309,7 +325,8 @@ export class PosComponent implements OnInit {
     this.selectedProductForVariant = product;
     this.selectedColor = product.variants[0]?.colorName || '';
     this.selectedSize = '';
-    this.variantQuantity = 1;
+    this.variantQuantity = 0;
+    this.drawerQuantityByVariant.clear();
     this.syncSelectedVariant();
     this.showVariantSelector = true;
   }
@@ -320,24 +337,46 @@ export class PosComponent implements OnInit {
     this.selectedVariant = null;
     this.selectedColor = '';
     this.selectedSize = '';
-    this.variantQuantity = 1;
+    this.variantQuantity = 0;
+    this.drawerQuantityByVariant.clear();
     this.clearRemoteStockSuggestions();
   }
 
   selectColor(colorName: string) {
+    const colorChanged = this.selectedColor !== colorName;
     this.selectedColor = colorName;
     this.selectedSize = '';
+    if (colorChanged) {
+      this.variantQuantity = 0;
+    }
     this.syncSelectedVariant();
   }
 
   selectSize(sizeName: string) {
+    const sizeChanged = this.selectedSize !== sizeName;
     this.selectedSize = sizeName;
+    if (sizeChanged) {
+      this.variantQuantity = 0;
+    }
     this.syncSelectedVariant();
   }
 
   setVariantQuantity(quantity: number) {
-    const max = this.getSelectedVariantEffectiveStock() || 1;
-    this.variantQuantity = Math.min(Math.max(1, quantity), Math.max(1, max));
+    const normalized = Math.floor(Number(quantity) || 0);
+    const max = Math.max(0, this.getSelectedVariantEffectiveStock());
+    const safeQuantity = Math.min(Math.max(0, normalized), max);
+    this.variantQuantity = safeQuantity;
+
+    const selectedVariantId = this.parsePositiveInt(this.selectedVariant?.id);
+    if (!selectedVariantId) {
+      return;
+    }
+
+    if (safeQuantity > 0) {
+      this.drawerQuantityByVariant.set(selectedVariantId, safeQuantity);
+    } else {
+      this.drawerQuantityByVariant.delete(selectedVariantId);
+    }
   }
 
   addVariantToCart() {
@@ -346,78 +385,75 @@ export class PosComponent implements OnInit {
       return;
     }
 
-    const usingRemoteStock = this.selectedVariant.availableStock <= 0;
-    const remoteStock = usingRemoteStock ? this.getSelectedRemoteStockOption() : null;
-    const effectiveStock = usingRemoteStock ? (remoteStock?.availableStock ?? 0) : this.selectedVariant.availableStock;
+    const selectedProduct = this.selectedProductForVariant;
+    const pendingSelections = this.collectDrawerPendingSelections(selectedProduct);
+    if (pendingSelections.length === 0 && this.variantQuantity <= 0) {
+      this.showToast('La cantidad debe ser mayor a 0.', 'error');
+      return;
+    }
 
-    if (effectiveStock <= 0) {
-      if (usingRemoteStock) {
-        if (this.remoteStockSuggestions.length > 0) {
-          this.showToast('Sin stock en el local. Selecciona un local remoto con disponibilidad.', 'error');
-        } else {
-          this.showToast('Sin stock en ningun local para esta variante.', 'error');
+    if (this.shouldAddAllDerivedSizeVariants(selectedProduct)) {
+      this.addAllDerivedSizeVariantsToCart(selectedProduct);
+      return;
+    }
+
+    const selectionsToAdd = pendingSelections.length
+      ? pendingSelections
+      : [{
+          variant: this.selectedVariant,
+          quantity: this.variantQuantity
+        }];
+
+    const failedMessages: string[] = [];
+    let addedCount = 0;
+    let usedRemoteStoreId: number | null = null;
+    let usedRemoteStoreName: string | null = null;
+
+    for (const selection of selectionsToAdd) {
+      const remoteStock = selection.variant.id === this.selectedVariant.id && this.selectedVariant.availableStock <= 0
+        ? this.getSelectedRemoteStockOption()
+        : null;
+
+      const result = this.upsertVariantInCart(
+        selectedProduct,
+        selection.variant,
+        selection.quantity,
+        remoteStock
+      );
+
+      if (!result.success) {
+        if (result.message) {
+          failedMessages.push(result.message);
         }
-      } else {
-        this.showToast('Esta variante no tiene stock disponible.', 'error');
+        continue;
       }
-      return;
+
+      addedCount += 1;
+      usedRemoteStoreId = result.fulfillmentStoreId ?? usedRemoteStoreId;
+      usedRemoteStoreName = result.fulfillmentStoreName ?? usedRemoteStoreName;
     }
 
-    if (this.variantQuantity > effectiveStock) {
-      this.showToast(`Stock disponible: ${effectiveStock}`, 'error');
+    if (addedCount === 0) {
+      this.showToast(failedMessages[0] || 'No se pudo agregar ninguna variante al carrito.', 'error');
       return;
-    }
-
-    const fulfillmentStoreId = remoteStock?.storeId ?? null;
-    const fulfillmentStoreName = remoteStock?.storeName ?? null;
-
-    if (fulfillmentStoreId && this.remoteFulfillmentStoreId && this.remoteFulfillmentStoreId !== fulfillmentStoreId) {
-      this.showToast('Solo puedes trabajar con una tienda de abastecimiento remoto por venta.', 'error');
-      return;
-    }
-
-    const existingItem = this.cart.find((item) => item.variantId === this.selectedVariant?.id);
-    if (existingItem && (existingItem.fulfillmentStoreId ?? null) !== fulfillmentStoreId) {
-      this.showToast('Esta variante ya fue agregada con otra tienda de abastecimiento.', 'error');
-      return;
-    }
-
-    const nextQuantity = (existingItem?.quantity || 0) + this.variantQuantity;
-    if (nextQuantity > effectiveStock) {
-      this.showToast(`Ya tienes el maximo disponible (${effectiveStock}) en el carrito.`, 'error');
-      return;
-    }
-
-    if (existingItem) {
-      existingItem.quantity = nextQuantity;
-      existingItem.subtotal = existingItem.quantity * existingItem.price;
-      existingItem.availableStock = effectiveStock;
-      existingItem.fulfillmentStoreId = fulfillmentStoreId;
-      existingItem.fulfillmentStoreName = fulfillmentStoreName;
-    } else {
-      this.cart.push({
-        productId: this.selectedProductForVariant.id,
-        productName: this.selectedProductForVariant.name,
-        variantId: this.selectedVariant.id,
-        sku: this.selectedVariant.sku,
-        colorName: this.selectedVariant.colorName,
-        sizeName: this.selectedVariant.sizeName,
-        price: this.selectedVariant.price,
-        imageUrl: this.selectedVariant.imageUrl || this.selectedProductForVariant.imageUrl,
-        quantity: this.variantQuantity,
-        subtotal: this.selectedVariant.price * this.variantQuantity,
-        availableStock: effectiveStock,
-        fulfillmentStoreId,
-        fulfillmentStoreName
-      });
     }
 
     this.syncRemoteFulfillmentFromCart();
     this.updateTotals();
     this.closeVariantSelector();
+    if (usedRemoteStoreId) {
+      this.showToast(`Producto agregado con stock remoto de ${usedRemoteStoreName}.`, 'success');
+      return;
+    }
+
+    if (failedMessages.length > 0) {
+      this.showToast(`Se agregaron ${addedCount} variante(s). Algunas no se pudieron agregar por stock.`, 'success');
+      return;
+    }
+
     this.showToast(
-      fulfillmentStoreId
-        ? `Producto agregado con stock remoto de ${fulfillmentStoreName}.`
+      addedCount > 1
+        ? `Se agregaron ${addedCount} variantes al carrito.`
         : 'Producto agregado al carrito.',
       'success'
     );
@@ -526,6 +562,7 @@ export class PosComponent implements OnInit {
     const orderData: any = {
       sourceStoreId,
       fulfillmentStoreId,
+      applyIgv: this.applyIgv,
       clientName: this.orderForm.get('clientName')?.value || 'Cliente POS',
       clientEmail: this.orderForm.get('clientEmail')?.value || undefined,
       clientPhone: this.orderForm.get('clientPhone')?.value || undefined,
@@ -613,10 +650,15 @@ export class PosComponent implements OnInit {
 
   updateTotals() {
     this.subtotal = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
-    this.tax = this.subtotal * this.taxRate;
+    this.tax = this.applyIgv ? this.subtotal * this.taxRate : 0;
     this.total = this.subtotal + this.tax;
     this.paymentForm?.patchValue({ amountPaid: this.total }, { emitEvent: false });
     this.calculateChange();
+  }
+
+  toggleIgvApplication(checked: boolean) {
+    this.applyIgv = checked;
+    this.updateTotals();
   }
 
   submitOrder() {
@@ -716,18 +758,26 @@ export class PosComponent implements OnInit {
   }
 
   private mapProduct(product: any): PosProduct {
-    const variants: PosVariant[] = (product.variants || []).map((variant: any) => ({
-      id: Number(variant.id),
-      sku: variant.sku || '',
-      barcode: variant.barcode || null,
-      colorName: variant.color?.name || 'Sin color',
-      colorHex: variant.color?.hex || null,
-      sizeName: variant.size?.name || 'Sin talla',
-      price: Number(variant.price || 0),
-      imageUrl: variant.imageUrl || null,
-      availableStock: 0,
-      reservedStock: 0
-    }));
+    const variants: PosVariant[] = (product.variants || [])
+      .map((variant: any): PosVariant | null => {
+        const variantId = this.parsePositiveInt(variant?.variantId) ?? this.parsePositiveInt(variant?.id);
+        if (!variantId) {
+          return null;
+        }
+        return {
+          id: variantId,
+          sku: String(variant?.sku || ''),
+          barcode: variant?.barcode || null,
+          colorName: variant?.color?.name || 'Sin color',
+          colorHex: variant?.color?.hex || null,
+          sizeName: variant?.size?.name || 'Sin talla',
+          price: Number(variant?.price || 0),
+          imageUrl: variant?.imageUrl || null,
+          availableStock: 0,
+          reservedStock: 0
+        };
+      })
+      .filter((variant: PosVariant | null): variant is PosVariant => variant !== null);
 
     const imageUrl = product.images?.[0]?.url || variants.find((variant) => variant.imageUrl)?.imageUrl || null;
 
@@ -746,6 +796,38 @@ export class PosComponent implements OnInit {
   private refreshCategories() {
     const categoryNames = this.products.map((product) => product.categoryName).filter(Boolean);
     this.categories = ['Todos', ...Array.from(new Set(categoryNames))];
+  }
+
+  getCartItemTrackKey(item: CartItem, index: number): string {
+    return `${this.buildCartItemKey(item)}::${index}`;
+  }
+
+  private buildCartItemKey(item: {
+    productId: number;
+    variantId: number;
+    sku: string;
+    colorName: string;
+    sizeName: string;
+    fulfillmentStoreId?: number | null;
+  }): string {
+    const variantId = this.parsePositiveInt(item.variantId);
+    const productId = this.parsePositiveInt(item.productId);
+    const fulfillmentStoreId = this.parsePositiveInt(item.fulfillmentStoreId) ?? 0;
+
+    const normalizedSku = String(item.sku || '').toUpperCase();
+    const normalizedColor = String(item.colorName || '').toUpperCase();
+    const normalizedSize = String(item.sizeName || '').toUpperCase();
+
+    // Incluye siempre SKU/color/talla para evitar colisiones cuando el backend entregue IDs repetidos.
+    return `variant:${variantId ?? 0}:product:${productId ?? 0}:sku:${normalizedSku}:color:${normalizedColor}:size:${normalizedSize}:remote:${fulfillmentStoreId}`;
+  }
+
+  private parsePositiveInt(value: unknown): number | null {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return null;
+    }
+    return parsed;
   }
 
   private applyStockToProduct(product: PosProduct, stockMap: Map<number, any>): PosProduct {
@@ -784,7 +866,7 @@ export class PosComponent implements OnInit {
     this.prefetchRemoteStockForVariants(variants);
     if (this.selectedVariant) {
       this.selectedSize = this.selectedVariant.sizeName;
-      this.variantQuantity = Math.min(this.variantQuantity, Math.max(1, this.getSelectedVariantEffectiveStock()));
+      this.variantQuantity = this.getDrawerQuantityForVariant(this.selectedVariant.id);
       if (this.selectedVariant.availableStock <= 0) {
         this.loadRemoteStockRecommendations(this.selectedVariant.id);
       }
@@ -793,7 +875,8 @@ export class PosComponent implements OnInit {
 
   selectRemoteStoreForVariant(storeId: number) {
     this.selectedRemoteStoreId = storeId;
-    this.variantQuantity = Math.min(this.variantQuantity, Math.max(1, this.getSelectedVariantEffectiveStock()));
+    this.variantQuantity = Math.min(this.variantQuantity, Math.max(0, this.getSelectedVariantEffectiveStock()));
+    this.syncDrawerQuantityForSelectedVariant();
     this.cdr.markForCheck();
   }
 
@@ -802,7 +885,37 @@ export class PosComponent implements OnInit {
   }
 
   canAddSelectedVariant(): boolean {
-    return !!this.selectedVariant && this.getSelectedVariantEffectiveStock() > 0;
+    if (!this.selectedProductForVariant || !this.selectedVariant) {
+      return false;
+    }
+
+    if (this.shouldAddAllDerivedSizeVariants(this.selectedProductForVariant)) {
+      if (this.variantQuantity <= 0) {
+        return false;
+      }
+      return this.getSizesForSelectedColor(this.selectedProductForVariant).some((variant) => {
+        const requested = Math.max(0, Math.floor(Number(this.variantQuantity) || 0));
+        const stock = Math.max(0, Number(variant.availableStock || 0));
+        return stock >= requested;
+      });
+    }
+
+    const pendingSelections = this.collectDrawerPendingSelections(this.selectedProductForVariant);
+    if (pendingSelections.length > 0) {
+      return pendingSelections.some((selection) => {
+        if (selection.variant.id === this.selectedVariant?.id) {
+          return selection.quantity > 0 && this.getSelectedVariantEffectiveStock() >= selection.quantity;
+        }
+        const localStock = Math.max(0, Number(selection.variant.availableStock || 0));
+        return selection.quantity > 0 && localStock >= selection.quantity;
+      });
+    }
+
+    return this.variantQuantity > 0 && this.getSelectedVariantEffectiveStock() >= this.variantQuantity;
+  }
+
+  getSelectedVariantMaxQuantity(): number {
+    return Math.max(0, this.getSelectedVariantEffectiveStock());
   }
 
   getCurrentStoreName(): string {
@@ -822,6 +935,186 @@ export class PosComponent implements OnInit {
     this.remoteStockSuggestions = [];
     this.loadingRemoteStock = false;
     this.selectedRemoteStoreId = null;
+  }
+
+  private shouldAddAllDerivedSizeVariants(product: PosProduct): boolean {
+    if (!product || product.variants.length <= 1) {
+      return false;
+    }
+
+    const normalizedColorNames = new Set(
+      product.variants.map((variant) => String(variant.colorName || '').trim().toLowerCase())
+    );
+
+    return normalizedColorNames.size === 1 && normalizedColorNames.has('sin color');
+  }
+
+  private collectDrawerPendingSelections(product: PosProduct): Array<{ variant: PosVariant; quantity: number }> {
+    const selections: Array<{ variant: PosVariant; quantity: number }> = [];
+
+    for (const variant of product.variants) {
+      const variantId = this.parsePositiveInt(variant.id);
+      if (!variantId) {
+        continue;
+      }
+
+      const quantity = this.drawerQuantityByVariant.get(variantId) ?? 0;
+      if (quantity <= 0) {
+        continue;
+      }
+
+      selections.push({ variant, quantity });
+    }
+
+    return selections;
+  }
+
+  private getDrawerQuantityForVariant(variantId: number): number {
+    const id = this.parsePositiveInt(variantId);
+    if (!id) {
+      return 0;
+    }
+
+    const savedQuantity = Number(this.drawerQuantityByVariant.get(id) || 0);
+    const max = Math.max(0, this.getSelectedVariantEffectiveStock());
+    return Math.min(Math.max(0, Math.floor(savedQuantity)), max);
+  }
+
+  private syncDrawerQuantityForSelectedVariant() {
+    const selectedVariantId = this.parsePositiveInt(this.selectedVariant?.id);
+    if (!selectedVariantId) {
+      return;
+    }
+
+    if (this.variantQuantity > 0) {
+      this.drawerQuantityByVariant.set(selectedVariantId, this.variantQuantity);
+    } else {
+      this.drawerQuantityByVariant.delete(selectedVariantId);
+    }
+  }
+
+  private addAllDerivedSizeVariantsToCart(product: PosProduct) {
+    const variants = this.getSizesForSelectedColor(product);
+    if (!variants.length) {
+      this.showToast('No hay variantes por talla para agregar.', 'error');
+      return;
+    }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+    const requestedQuantity = Math.max(0, Math.floor(Number(this.variantQuantity) || 0));
+    if (requestedQuantity <= 0) {
+      this.showToast('La cantidad debe ser mayor a 0.', 'error');
+      return;
+    }
+
+    for (const variant of variants) {
+      const result = this.upsertVariantInCart(product, variant, requestedQuantity, null);
+      if (result.success) {
+        addedCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+    }
+
+    if (addedCount === 0) {
+      this.showToast('No se pudo agregar ninguna talla por falta de stock disponible.', 'error');
+      return;
+    }
+
+    this.syncRemoteFulfillmentFromCart();
+    this.updateTotals();
+    this.closeVariantSelector();
+    this.showToast(
+      skippedCount > 0
+        ? `Se agregaron ${addedCount} talla(s). ${skippedCount} no se agregaron por stock.`
+        : `Se agregaron ${addedCount} talla(s) al carrito.`,
+      'success'
+    );
+  }
+
+  private upsertVariantInCart(
+    product: PosProduct,
+    variant: PosVariant,
+    quantity: number,
+    remoteStock: RemoteStockOption | null
+  ): CartUpsertResult {
+    const selectedVariantId = this.parsePositiveInt(variant.id);
+    if (!selectedVariantId) {
+      return { success: false, message: 'No se pudo identificar la variante seleccionada.' };
+    }
+
+    const usingRemoteStock = variant.availableStock <= 0;
+    const effectiveStock = usingRemoteStock ? (remoteStock?.availableStock ?? 0) : variant.availableStock;
+
+    if (effectiveStock <= 0) {
+      if (usingRemoteStock) {
+        if (this.remoteStockSuggestions.length > 0) {
+          return { success: false, message: 'Sin stock en el local. Selecciona un local remoto con disponibilidad.' };
+        }
+        return { success: false, message: 'Sin stock en ningun local para esta variante.' };
+      }
+      return { success: false, message: 'Esta variante no tiene stock disponible.' };
+    }
+
+    if (quantity > effectiveStock) {
+      return { success: false, message: `Stock disponible: ${effectiveStock}` };
+    }
+
+    const fulfillmentStoreId = remoteStock?.storeId ?? null;
+    const fulfillmentStoreName = remoteStock?.storeName ?? null;
+
+    if (fulfillmentStoreId && this.remoteFulfillmentStoreId && this.remoteFulfillmentStoreId !== fulfillmentStoreId) {
+      return { success: false, message: 'Solo puedes trabajar con una tienda de abastecimiento remoto por venta.' };
+    }
+
+    const selectedCartKey = this.buildCartItemKey({
+      productId: product.id,
+      variantId: selectedVariantId,
+      sku: variant.sku,
+      colorName: variant.colorName,
+      sizeName: variant.sizeName,
+      fulfillmentStoreId,
+    });
+    const existingItem = this.cart.find((item) => this.buildCartItemKey(item) === selectedCartKey);
+    if (existingItem && (existingItem.fulfillmentStoreId ?? null) !== fulfillmentStoreId) {
+      return { success: false, message: 'Esta variante ya fue agregada con otra tienda de abastecimiento.' };
+    }
+
+    const nextQuantity = (existingItem?.quantity || 0) + quantity;
+    if (nextQuantity > effectiveStock) {
+      return { success: false, message: `Ya tienes el maximo disponible (${effectiveStock}) en el carrito.` };
+    }
+
+    if (existingItem) {
+      existingItem.quantity = nextQuantity;
+      existingItem.subtotal = existingItem.quantity * existingItem.price;
+      existingItem.availableStock = effectiveStock;
+      existingItem.fulfillmentStoreId = fulfillmentStoreId;
+      existingItem.fulfillmentStoreName = fulfillmentStoreName;
+    } else {
+      this.cart.push({
+        productId: product.id,
+        productName: product.name,
+        variantId: selectedVariantId,
+        sku: variant.sku,
+        colorName: variant.colorName,
+        sizeName: variant.sizeName,
+        price: variant.price,
+        imageUrl: variant.imageUrl || product.imageUrl,
+        quantity,
+        subtotal: variant.price * quantity,
+        availableStock: effectiveStock,
+        fulfillmentStoreId,
+        fulfillmentStoreName
+      });
+    }
+
+    return {
+      success: true,
+      fulfillmentStoreId,
+      fulfillmentStoreName
+    };
   }
 
   private prefetchRemoteStockForVariants(variants: PosVariant[]) {
@@ -857,7 +1150,8 @@ export class PosComponent implements OnInit {
           this.selectedRemoteStoreId = null;
         }
         this.loadingRemoteStock = false;
-        this.variantQuantity = Math.min(this.variantQuantity, Math.max(1, this.getSelectedVariantEffectiveStock()));
+        this.variantQuantity = Math.min(this.variantQuantity, Math.max(0, this.getSelectedVariantEffectiveStock()));
+        this.syncDrawerQuantityForSelectedVariant();
         this.cdr.markForCheck();
       }
       return;
@@ -902,7 +1196,8 @@ export class PosComponent implements OnInit {
           }
 
           this.loadingRemoteStock = false;
-          this.variantQuantity = Math.min(this.variantQuantity, Math.max(1, this.getSelectedVariantEffectiveStock()));
+          this.variantQuantity = Math.min(this.variantQuantity, Math.max(0, this.getSelectedVariantEffectiveStock()));
+          this.syncDrawerQuantityForSelectedVariant();
         }
         this.cdr.markForCheck();
       },
@@ -1006,13 +1301,14 @@ export class PosComponent implements OnInit {
   private buildOrderNote(paymentRef: string): string {
     const note = this.orderForm.get('note')?.value;
     const paymentNote = `Metodo de pago: ${this.selectedPaymentMethod}`;
+    const igvNote = `IGV: ${this.applyIgv ? 'INCLUIDO' : 'NO_INCLUIDO'}`;
     const referenceNote = `Ref: ${paymentRef}`;
     const remoteStoreName = this.getStoreNameById(this.remoteFulfillmentStoreId);
     const remoteFulfillmentNote =
       this.remoteFulfillmentStoreId && this.remoteFulfillmentStoreId !== Number(this.selectedStoreId)
         ? `Fulfillment remoto: ${remoteStoreName || `Tienda #${this.remoteFulfillmentStoreId}`}`
         : null;
-    const baseNote = note ? `${note} | ${paymentNote}` : paymentNote;
+    const baseNote = note ? `${note} | ${paymentNote} | ${igvNote}` : `${paymentNote} | ${igvNote}`;
     const baseWithFulfillment = remoteFulfillmentNote ? `${baseNote} | ${remoteFulfillmentNote}` : baseNote;
     return `${baseWithFulfillment} | ${referenceNote}`;
   }

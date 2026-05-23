@@ -118,6 +118,8 @@ export interface MarketplaceCheckoutPaymentMethod {
 
 export interface MarketplaceCheckoutPaymentConfig {
   enabled: boolean;
+  includeIgv: boolean;
+  igvRate: number;
   methods: MarketplaceCheckoutPaymentMethod[];
 }
 

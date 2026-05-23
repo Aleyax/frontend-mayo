@@ -94,6 +94,18 @@ export const adminDashboardRoute: Routes = [
         loadComponent: () => import('./pages/system-settings-page/system-settings-page.component').then(m => m.SystemSettingsPageComponent)
       },
       {
+        path: 'audit-logs',
+        canActivate: [PermissionGuard],
+        data: { permission: 'settings.manage' },
+        loadComponent: () => import('./pages/audit-log-page/audit-log-page.component').then(m => m.AuditLogPageComponent)
+      },
+      {
+        path: 'user-activities',
+        canActivate: [PermissionGuard],
+        data: { permission: 'settings.manage' },
+        loadComponent: () => import('./pages/user-activity-page/user-activity-page.component').then(m => m.UserActivityPageComponent)
+      },
+      {
         path: 'orders',
         canActivate: [PermissionGuard],
         data: { permission: 'orders.view' },

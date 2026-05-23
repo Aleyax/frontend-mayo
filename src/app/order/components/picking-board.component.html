@@ -1,4 +1,4 @@
-<div class="picking-board-container">
+﻿<div class="picking-board-container">
   <div class="picking-header">
     <h1>Tablero de Picking</h1>
     <p>Gestion de preparacion de pedidos</p>
@@ -16,6 +16,19 @@
             <option value="READY">Listos</option>
           </select>
         </form>
+
+        <div class="status-shortcuts">
+          @for (shortcut of pickingStatusShortcuts; track shortcut.value) {
+            <button
+              type="button"
+              class="status-shortcut-btn"
+              [class.status-shortcut-btn--active]="isStatusShortcutActive(shortcut.value)"
+              (click)="applyStatusShortcut(shortcut.value)"
+            >
+              {{ shortcut.label }}
+            </button>
+          }
+        </div>
       </div>
 
       @if (loading) {
@@ -54,142 +67,349 @@
       }
     </div>
 
-    <div class="picking-detail-section">
-      @if (!selectedOrder) {
-        <div class="no-selection">
-          <p>Selecciona un pedido para comenzar el picking</p>
+    @if (!isMobileView()) {
+      <div class="picking-detail-section">
+        @if (!selectedOrder) {
+          <div class="no-selection">
+            <p>Selecciona un pedido para comenzar el picking</p>
+          </div>
+        }
+
+        @if (selectedOrder) {
+          <ng-container [ngTemplateOutlet]="pickingDetailTemplate"></ng-container>
+        }
+      </div>
+    }
+  </div>
+
+  @if (isMobileView() && selectedOrder) {
+    <div class="picking-modal-overlay" (click)="clearSelection()">
+      <section class="picking-modal" role="dialog" aria-modal="true" aria-label="Detalle de picking" (click)="$event.stopPropagation()">
+        <ng-container [ngTemplateOutlet]="pickingDetailTemplate"></ng-container>
+      </section>
+    </div>
+  }
+
+  <ng-template #pickingDetailTemplate>
+    <div class="picking-detail">
+      <div class="detail-header">
+        <h2>{{ selectedOrder.code }}</h2>
+        <button type="button" (click)="clearSelection()" class="btn-clear" aria-label="Cerrar detalle">
+          x
+        </button>
+      </div>
+
+      <div class="order-summary">
+        <div class="summary-item">
+          <label>Cliente:</label>
+          <span>{{ selectedOrder.clientName || "Cliente" }}</span>
+        </div>
+        <div class="summary-item">
+          <label>Estado:</label>
+          <span>{{ getStatusLabel(selectedOrder.status) }}</span>
+        </div>
+        <div class="summary-item">
+          <label>Canal:</label>
+          <span>{{ selectedOrder.salesChannel || "-" }}</span>
+        </div>
+        <div class="summary-item">
+          <label>Responsable picking:</label>
+          <span>{{ getPickingPrimaryResponsibleLabel() }}</span>
+        </div>
+      </div>
+
+      @if (isPickingResponsibilityFlowEnabled()) {
+        <div class="incomplete-section">
+          <p class="warning">Flujo de responsabilidad en picking activo.</p>
+          @if (getSharedResponsibles().length > 0) {
+            <p class="warning">Responsables compartidos:</p>
+            <div class="status-shortcuts">
+              @for (shared of getSharedResponsibles(); track shared.id ?? shared.user?.id ?? $index) {
+                <span class="status-shortcut-btn status-shortcut-btn--active">
+                  {{ shared.user?.firstName }} {{ shared.user?.lastName }}
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="warning">Responsables compartidos: ninguno</p>
+          }
+        </div>
+
+        @if (!isCurrentUserPrimaryResponsible() && !isCurrentUserSharedResponsible()) {
+          <div class="complete-section">
+            <div class="completion-message">Puedes solicitar participar en este picking.</div>
+            <button
+              type="button"
+              class="btn-complete-order"
+              (click)="requestResponsibility('SHARED')"
+              [disabled]="!canRequestResponsibility('SHARED')"
+            >
+              {{ requestingResponsibilityMode === 'SHARED' ? 'Enviando...' : 'Solicitar responsabilidad compartida' }}
+            </button>
+            <button
+              type="button"
+              class="btn-mark-complete"
+              (click)="requestResponsibility('TRANSFER')"
+              [disabled]="!canRequestResponsibility('TRANSFER')"
+            >
+              {{ requestingResponsibilityMode === 'TRANSFER' ? 'Enviando...' : 'Solicitar ser responsable principal' }}
+            </button>
+          </div>
+        }
+
+        @if (getPendingResponsibilityRequests().length > 0) {
+          <div class="items-to-pick">
+            <h3>Solicitudes pendientes de responsabilidad</h3>
+            <table class="picking-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Modo solicitado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (request of getPendingResponsibilityRequests(); track request.id ?? $index) {
+                  <tr>
+                    <td>{{ request.requester?.firstName }} {{ request.requester?.lastName }}</td>
+                    <td>{{ request.mode === 'TRANSFER' ? 'Transferir responsable' : 'Compartir responsable' }}</td>
+                    <td>{{ request.createdAt | date: 'short' }}</td>
+                    <td class="actions">
+                      @if (canResolveResponsibilityRequests()) {
+                        <button
+                          type="button"
+                          class="btn-mark-complete"
+                          (click)="resolveResponsibilityRequest(request.id, 'APPROVE')"
+                          [disabled]="isResolvingResponsibilityRequest(request.id)"
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-minus"
+                          (click)="resolveResponsibilityRequest(request.id, 'REJECT')"
+                          [disabled]="isResolvingResponsibilityRequest(request.id)"
+                        >
+                          Rechazar
+                        </button>
+                      } @else {
+                        <span class="no-transitions">Pendiente de decision del responsable principal</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      @if (loadingDetail) {
+        <div class="loading">Cargando picking...</div>
+      }
+
+      @if (canStartPicking()) {
+        <div class="start-section">
+          <p class="warning">Esta orden aun no tiene una sesion de picking iniciada.</p>
+          <button type="button" (click)="startPicking()" class="btn-complete-order" [disabled]="startingPicking">
+            {{ startingPicking ? "Iniciando..." : "Iniciar preparacion" }}
+          </button>
         </div>
       }
 
-      @if (selectedOrder) {
-        <div class="picking-detail">
-          <div class="detail-header">
-            <h2>{{ selectedOrder.code }}</h2>
-            <button type="button" (click)="clearSelection()" class="btn-clear">X</button>
+      @if (selectedPicking?.pickingSession) {
+        @if (reloadingDetail) {
+          <p class="refreshing-note">Actualizando datos de picking...</p>
+        }
+        <div class="overall-progress">
+          <h3>Progreso General</h3>
+          <div class="progress-bar-large">
+            <div class="progress-fill" [style.width.%]="selectedPicking.summary?.progress || 0"></div>
           </div>
-
-          <div class="order-summary">
-            <div class="summary-item">
-              <label>Cliente:</label>
-              <span>{{ selectedOrder.clientName || "Cliente" }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Estado:</label>
-              <span>{{ getStatusLabel(selectedOrder.status) }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Canal:</label>
-              <span>{{ selectedOrder.salesChannel || "-" }}</span>
-            </div>
-            <div class="summary-item">
-              <label>Responsable picking:</label>
-              <span>{{ selectedPicking?.pickingSession?.assignedUser?.firstName || selectedOrder.pickerUser?.firstName || "No asignado" }}</span>
-            </div>
-          </div>
-
-          @if (loadingDetail) {
-            <div class="loading">Cargando picking...</div>
-          }
-
-          @if (canStartPicking()) {
-            <div class="start-section">
-              <p class="warning">Esta orden aun no tiene una sesion de picking iniciada.</p>
-              <button type="button" (click)="startPicking()" class="btn-complete-order" [disabled]="startingPicking">
-                {{ startingPicking ? "Iniciando..." : "Iniciar preparacion" }}
-              </button>
-            </div>
-          }
-
-          @if (selectedPicking?.pickingSession) {
-            @if (reloadingDetail) {
-              <p class="refreshing-note">Actualizando datos de picking...</p>
-            }
-            <div class="overall-progress">
-              <h3>Progreso General</h3>
-              <div class="progress-bar-large">
-                <div class="progress-fill" [style.width.%]="selectedPicking.summary?.progress || 0"></div>
-              </div>
-              <p class="progress-text-large">{{ selectedPicking.summary?.progress || 0 }}% completado</p>
-            </div>
-
-            <div class="items-to-pick">
-              <h3>Productos a Preparar</h3>
-              <table class="picking-table">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Variante</th>
-                    <th>Solicitada</th>
-                    <th>Separada</th>
-                    <th>Faltante</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of selectedPicking.items; track item.pickingItemId ?? item.variantId ?? $index) {
-                    <tr [class.completed]="item.status === 'COMPLETED'">
-                      <td>{{ item.variant?.product?.name || "Producto" }}</td>
-                      <td>{{ item.variant?.color?.name || "-" }} - {{ item.variant?.size?.name || "-" }}</td>
-                      <td class="quantity">{{ item.requestedQuantity }}</td>
-                      <td class="quantity">{{ item.pickedQuantity }}</td>
-                      <td class="quantity">{{ item.missingQuantity }}</td>
-                      <td>
-                        <span class="item-status" [class]="'item-status ' + getItemStatusClass(item.status)">
-                          {{ getItemStatusLabel(item.status) }}
-                        </span>
-                      </td>
-                      <td class="actions">
-                        <button type="button" (click)="markItemUnpicked(item)" class="btn-minus" [disabled]="isItemUpdating(item) || item.pickedQuantity <= 0">
-                          -
-                        </button>
-                        <span class="counter">{{ item.pickedQuantity }}</span>
-                        <button
-                          type="button"
-                          (click)="markItemPicked(item)"
-                          class="btn-plus"
-                          [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          (click)="markItemComplete(item)"
-                          class="btn-mark-complete"
-                          [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
-                        >
-                          Completar
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            @if (selectedPicking.summary?.completed) {
-              <div class="complete-section">
-                @if (!isPickingFinalized()) {
-                  <div class="completion-message">Todos los productos han sido separados</div>
-                  <button type="button" (click)="completeOrder()" class="btn-complete-order" [disabled]="completingPicking">
-                    {{ completingPicking ? "Finalizando..." : "Finalizar preparacion" }}
-                  </button>
-                } @else {
-                  <p class="completion-final-message">Preparacion finalizada. Pedido listo para entrega.</p>
-                }
-              </div>
-            }
-
-            @if (!selectedPicking.summary?.completed) {
-              <div class="incomplete-section">
-                <p class="warning">
-                  Completa la separacion de todos los productos para dejar el pedido listo
-                </p>
-              </div>
-            }
-          }
+          <p class="progress-text-large">{{ selectedPicking.summary?.progress || 0 }}% completado</p>
         </div>
+
+        <div class="items-to-pick">
+          <h3>Productos a Preparar</h3>
+          <table class="picking-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Variante</th>
+                <th>Solicitada</th>
+                <th>Separada</th>
+                <th>Faltante</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+	              @for (item of selectedPicking.items; track item.pickingItemId ?? item.variantId ?? $index) {
+	                <tr [class.completed]="item.status === 'COMPLETED'">
+	                  <td>{{ item.variant?.product?.name || "Producto" }}</td>
+	                  <td>
+	                    {{ item.variant?.color?.name || "-" }} - {{ item.variant?.size?.name || "-" }}
+	                    @if (getItemContributions(item).length > 0) {
+	                      <div class="item-contributions">
+	                        @for (contribution of getItemContributions(item); track contribution.id ?? contribution.user?.id ?? $index) {
+	                          <span class="item-contribution-badge">
+	                            {{ contribution.user?.firstName || contribution.user?.email || ('Usuario #' + contribution.user?.id) }}:
+	                            {{ contribution.quantity }}
+	                          </span>
+	                        }
+	                      </div>
+	                    }
+	                  </td>
+	                  <td class="quantity">{{ item.requestedQuantity }}</td>
+	                  <td class="quantity">{{ item.pickedQuantity }}</td>
+	                  <td class="quantity">{{ item.missingQuantity }}</td>
+	                  <td>
+	                    <span class="item-status" [class]="'item-status ' + getItemStatusClass(item.status)">
+                      {{ getItemStatusLabel(item.status) }}
+                    </span>
+                  </td>
+	                  <td class="actions">
+	                    <button type="button" (click)="markItemUnpicked(item)" class="btn-minus" [disabled]="isItemUpdating(item) || item.pickedQuantity <= 0">
+	                      -
+	                    </button>
+	                    <span class="counter">{{ item.pickedQuantity }}</span>
+	                    <button
+	                      type="button"
+                      (click)="markItemPicked(item)"
+                      class="btn-plus"
+                      [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      (click)="markItemComplete(item)"
+                      class="btn-mark-complete"
+	                      [disabled]="isItemUpdating(item) || item.pickedQuantity >= item.requestedQuantity"
+	                    >
+	                      Completar
+	                    </button>
+	                    @if (canShowUnpickRequestButton(item)) {
+	                      <button
+	                        type="button"
+	                        class="btn-request-action"
+	                        (click)="toggleUnpickRequestForm(item)"
+	                        [disabled]="isRequestingUnpickForItem(item)"
+	                      >
+	                        {{ isUnpickRequestFormOpen(item) ? 'Cancelar solicitud' : 'Solicitar accion' }}
+	                      </button>
+	                    }
+	                  </td>
+	                </tr>
+	                @if (isUnpickRequestFormOpen(item) || getPendingUnpickRequests(item).length > 0) {
+	                  <tr class="unpick-request-row">
+	                    <td colspan="7">
+	                      @if (isUnpickRequestFormOpen(item)) {
+	                        <div class="unpick-request-form">
+	                          <div class="unpick-request-form-title">
+	                            Solicitar unpick de unidades separadas por otro colaborador
+	                          </div>
+	                          <div class="unpick-request-form-fields">
+	                            <label>
+	                              Cantidad
+	                              <input
+	                                type="number"
+	                                min="1"
+	                                [max]="getUnpickRequestableQuantity(item)"
+	                                [value]="getUnpickRequestDraft(item).quantity"
+	                                (input)="updateUnpickRequestDraftQuantity(item, $any($event.target).value)"
+	                              />
+	                            </label>
+	                            <label class="unpick-request-note">
+	                              Nota (opcional)
+	                              <input
+	                                type="text"
+	                                [value]="getUnpickRequestDraft(item).note"
+	                                (input)="updateUnpickRequestDraftNote(item, $any($event.target).value)"
+	                                maxlength="200"
+	                                placeholder="Ej. ajustar cantidad por cambio de cliente"
+	                              />
+	                            </label>
+	                            <button
+	                              type="button"
+	                              class="btn-mark-complete"
+	                              (click)="submitUnpickRequest(item)"
+	                              [disabled]="!canSubmitUnpickRequest(item)"
+	                            >
+	                              {{ isRequestingUnpickForItem(item) ? 'Enviando...' : 'Enviar solicitud' }}
+	                            </button>
+	                          </div>
+	                        </div>
+	                      }
+	
+	                      @if (getPendingUnpickRequests(item).length > 0) {
+	                        <div class="pending-unpick-requests">
+	                          <div class="pending-unpick-title">Solicitudes pendientes</div>
+	                          @for (request of getPendingUnpickRequests(item); track request.id ?? $index) {
+	                            <div class="pending-unpick-entry">
+	                              <div class="pending-unpick-info">
+	                                <strong>{{ request.requester?.firstName }} {{ request.requester?.lastName }}</strong>
+	                                pide retirar <strong>{{ request.quantity }}</strong> und.
+	                                @if (request.note) {
+	                                  <span class="pending-unpick-note">({{ request.note }})</span>
+	                                }
+	                              </div>
+	                              <div class="pending-unpick-actions">
+	                                @if (canResolveUnpickRequest(item, request)) {
+	                                  <button
+	                                    type="button"
+	                                    class="btn-mark-complete"
+	                                    (click)="resolveUnpickRequest(item, request.id, 'APPROVE')"
+	                                    [disabled]="isResolvingUnpickRequest(request.id)"
+	                                  >
+	                                    Aprobar
+	                                  </button>
+	                                  <button
+	                                    type="button"
+	                                    class="btn-minus"
+	                                    (click)="resolveUnpickRequest(item, request.id, 'REJECT')"
+	                                    [disabled]="isResolvingUnpickRequest(request.id)"
+	                                  >
+	                                    Rechazar
+	                                  </button>
+	                                } @else {
+	                                  <span class="no-transitions">Pendiente de aprobacion</span>
+	                                }
+	                              </div>
+	                            </div>
+	                          }
+	                        </div>
+	                      }
+	                    </td>
+	                  </tr>
+	                }
+	              }
+	            </tbody>
+	          </table>
+	        </div>
+
+        @if (selectedPicking.summary?.completed) {
+          <div class="complete-section">
+            @if (!isPickingFinalized()) {
+              <div class="completion-message">Todos los productos han sido separados</div>
+              <button type="button" (click)="completeOrder()" class="btn-complete-order" [disabled]="completingPicking">
+                {{ completingPicking ? "Finalizando..." : "Finalizar preparacion" }}
+              </button>
+            } @else {
+              <p class="completion-final-message">Preparacion finalizada. Pedido listo para entrega.</p>
+            }
+          </div>
+        }
+
+        @if (!selectedPicking.summary?.completed) {
+          <div class="incomplete-section">
+            <p class="warning">
+              Completa la separacion de todos los productos para dejar el pedido listo
+            </p>
+          </div>
+        }
       }
     </div>
-  </div>
+  </ng-template>
 </div>

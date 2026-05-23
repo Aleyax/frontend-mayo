@@ -142,7 +142,9 @@
         </div>
         <div class="summary-total">
           <div><span>Subtotal</span><strong>S/ {{ subtotal() | number: '1.2-2' }}</strong></div>
-          <div><span>IGV</span><strong>S/ {{ tax() | number: '1.2-2' }}</strong></div>
+          @if (includeIgv()) {
+            <div><span>{{ igvLabel }}</span><strong>S/ {{ tax() | number: '1.2-2' }}</strong></div>
+          }
           <div class="total"><span>Total</span><strong>S/ {{ total() | number: '1.2-2' }}</strong></div>
         </div>
       </aside>

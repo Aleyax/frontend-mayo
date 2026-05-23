@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -25,6 +25,8 @@ export class CheckoutComponent implements OnInit {
   loadingPaymentMethods = false;
   submitting = false;
   errorMessage = '';
+  readonly includeIgv = signal(true);
+  readonly igvRate = signal(0.18);
   paymentMethodsEnabled = false;
   paymentMethods: MarketplaceCheckoutPaymentMethod[] = [];
   selectedPaymentMethodId: number | null = null;
@@ -45,8 +47,15 @@ export class CheckoutComponent implements OnInit {
   deliveryReference = '';
 
   readonly subtotal = computed(() => this.cartService.subtotal());
-  readonly tax = computed(() => this.subtotal() * 0.18);
+  readonly tax = computed(() => this.includeIgv() ? this.subtotal() * this.igvRate() : 0);
   readonly total = computed(() => this.subtotal() + this.tax());
+
+  get igvLabel(): string {
+    if (!this.includeIgv()) {
+      return 'IGV (no incluido)';
+    }
+    return `IGV (${Math.round(this.igvRate() * 100)}%)`;
+  }
 
   ngOnInit() {
     this.prefillCustomerFromSession();
@@ -184,11 +193,15 @@ export class CheckoutComponent implements OnInit {
       next: (response) => {
         const data = response?.data;
         this.paymentMethodsEnabled = data?.enabled === true;
+        this.includeIgv.set(data?.includeIgv !== false);
+        this.igvRate.set(Number(data?.igvRate || 0.18));
         this.paymentMethods = Array.isArray(data?.methods) ? data.methods : [];
         this.syncSelectedPaymentMethod();
         this.loadingPaymentMethods = false;
       },
       error: () => {
+        this.includeIgv.set(true);
+        this.igvRate.set(0.18);
         this.paymentMethodsEnabled = false;
         this.paymentMethods = [];
         this.selectedPaymentMethodId = null;

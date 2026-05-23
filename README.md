@@ -82,3 +82,32 @@ Example route metadata:
   data: { permission: 'roles.view' }
 }
 ```
+
+## CSS Conventions (Component Style Budgets)
+
+To keep Angular `anyComponentStyle` budgets under control and avoid large single CSS files, use segmented stylesheets per component.
+
+- Keep each component stylesheet file below `8kB` (production warning threshold in `angular.json`).
+- Prefer semantic names over numeric parts.
+- Keep the order in `styleUrls` stable (from base layout to overrides), because cascade order matters.
+
+Recommended naming pattern:
+
+- `<component>.base-*.css` or `<component>.layout-*.css` for structure/layout.
+- `<component>.cart.css`, `<component>.items-actions.css`, etc. for feature sections.
+- `<component>.theme-overrides.css` for theme-specific tweaks (`:host-context(...)`, color overrides).
+- `<component>.print.css` for print/document views when needed.
+- `<component>.drawer-responsive.css` (or similar) for responsive/media-query heavy sections.
+
+Current examples in the codebase:
+
+- `src/app/order/components/pos.component.*.css`
+- `src/app/order/components/order-detail.component.*.css`
+- `src/app/order/components/picking-board.component.*.css`
+- `src/app/store/pages/product-detail/product-detail.component.*.css`
+
+When editing styles:
+
+1. Update the most specific segmented file (do not create a new large monolithic CSS file).
+2. If a section grows too much, split it again by concern and update `styleUrls`.
+3. Run `ng build` to verify budgets remain healthy.

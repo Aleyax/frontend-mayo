@@ -1,0 +1,265 @@
+
+.invoice-brand h2 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+}
+
+.invoice-brand p {
+  margin: 0.15rem 0;
+  font-size: 0.82rem;
+}
+
+.invoice-meta {
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  min-width: 220px;
+  text-align: center;
+}
+
+.invoice-meta p {
+  margin: 0.25rem 0;
+  font-size: 0.86rem;
+}
+
+.invoice-meta .invoice-doc {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.invoice-meta .invoice-code {
+  font-weight: 700;
+}
+
+.invoice-client {
+  margin-top: 0.9rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.invoice-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.7rem;
+}
+
+.invoice-items th,
+.invoice-items td {
+  border: 1px solid #1f2937;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.84rem;
+  vertical-align: top;
+}
+
+.invoice-items th {
+  text-transform: uppercase;
+  font-size: 0.73rem;
+  letter-spacing: 0.02em;
+}
+
+.invoice-summary {
+  margin-top: 0.9rem;
+  margin-left: auto;
+  width: min(340px, 100%);
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.invoice-summary div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invoice-summary .total {
+  border-top: 1px solid #1f2937;
+  padding-top: 0.4rem;
+  font-size: 1.05rem;
+}
+
+.invoice-footer {
+  margin-top: 0.85rem;
+}
+
+.invoice-footer p {
+  margin: 0.2rem 0;
+}
+
+.ticket-header,
+.ticket-client,
+.ticket-summary,
+.ticket-footer {
+  text-align: center;
+}
+
+.ticket-title {
+  font-weight: 700;
+  font-size: 1.02rem;
+  margin-bottom: 0.25rem;
+}
+
+.ticket-header p,
+.ticket-client p,
+.ticket-footer p {
+  margin: 0.2rem 0;
+  font-size: 0.84rem;
+}
+
+.ticket-divider {
+  border-top: 1px dashed #111;
+  margin: 0.55rem 0;
+}
+
+.ticket-items {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ticket-item-name {
+  margin: 0;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.ticket-item-line {
+  margin: 0.1rem 0 0 0;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.ticket-summary p {
+  margin: 0.2rem 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86rem;
+}
+
+.ticket-total {
+  border-top: 1px solid #111;
+  margin-top: 0.35rem;
+  padding-top: 0.25rem;
+  font-size: 1rem;
+}
+
+:host {
+  --detail-bg: var(--color-base-200);
+  --detail-surface: var(--color-base-100);
+  --detail-surface-soft: color-mix(in oklab, var(--color-base-200) 72%, var(--color-base-100));
+  --detail-border: var(--color-base-300);
+  --detail-text: var(--color-base-content);
+  --detail-muted: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  --detail-primary: var(--color-primary);
+  --detail-primary-content: var(--color-primary-content);
+  --detail-success: var(--color-success);
+  --detail-return-bg: color-mix(in oklab, #f59e0b 16%, var(--color-base-100));
+  --detail-return-border: color-mix(in oklab, #f59e0b 42%, var(--color-base-300));
+  --detail-return-text: color-mix(in oklab, #d97706 78%, var(--color-base-content));
+}
+
+.order-detail-container {
+  background: var(--detail-bg);
+}
+
+.card,
+.modal-content,
+.status-transitions {
+  background: var(--detail-surface);
+  border-color: var(--detail-border);
+}
+
+.order-header,
+.info-row,
+.items-table th,
+.items-table td {
+  border-color: var(--detail-border);
+}
+
+.header-left h1,
+.card h3,
+.info-row label,
+.responsible label,
+.location label,
+.items-table th,
+.modal-content h3,
+.form-group label {
+  color: var(--detail-text);
+}
+
+.loading,
+.client-info,
+.info-row span,
+.responsible span,
+.location span,
+.items-table td,
+.status-transitions p,
+.modal-content p {
+  color: var(--detail-muted);
+}
+
+.status-transitions,
+.items-table thead {
+  background: var(--detail-surface-soft);
+}
+
+.return-task-box {
+  background: var(--detail-return-bg);
+  border-color: var(--detail-return-border);
+}
+
+.return-task-box h4,
+.return-task-chip,
+.return-task-warning {
+  color: var(--detail-return-text);
+}
+
+.return-task-chip,
+.return-task-warning,
+.return-task-item {
+  border-color: color-mix(in oklab, var(--detail-return-border) 85%, var(--detail-border));
+}
+
+.return-task-chip {
+  background: color-mix(in oklab, var(--detail-return-bg) 72%, var(--detail-surface));
+}
+
+.return-task-item {
+  background: var(--detail-surface);
+}
+
+.transition-pill {
+  background: color-mix(in oklab, var(--detail-primary) 14%, var(--detail-surface));
+  border-color: color-mix(in oklab, var(--detail-primary) 28%, var(--detail-border));
+  color: var(--detail-text);
+}
+
+.mobile-row-card {
+  border-color: var(--detail-border);
+  background: color-mix(in oklab, var(--detail-surface) 90%, var(--detail-border));
+}
+
+.mobile-row-title,
+.mobile-field strong {
+  color: var(--detail-text);
+}
+
+.mobile-field {
+  border-top-color: var(--detail-border);
+}
+
+.mobile-field span {
+  color: var(--detail-muted);
+}
+
+.items-table tbody tr {
+  background: color-mix(in oklab, var(--detail-surface) 90%, var(--detail-border));
+  transition: background 0.2s ease-in-out;
+}

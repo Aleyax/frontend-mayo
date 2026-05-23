@@ -1,8 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
-@plugin "daisyui";
 @plugin "daisyui" {
-  themes: all;
+  themes: light --default, dark --prefersdark;
 }
 
 @media (max-width: 768px) {

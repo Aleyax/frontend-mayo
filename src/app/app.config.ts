@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './auth/auth.interceptor';
+import { marketplaceAuthInterceptor } from './store/interceptors/marketplace-auth.interceptor';
 
 import { routes } from './app.routes';
 
@@ -11,7 +12,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(
       withFetch(),
-      withInterceptors([authInterceptor])
+      withInterceptors([authInterceptor, marketplaceAuthInterceptor])
     )
   ]
 };

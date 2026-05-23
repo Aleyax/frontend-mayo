@@ -15,7 +15,12 @@ type PrintLayout = 'invoice' | 'ticket';
 @Component({
   selector: 'app-order-detail',
   templateUrl: './order-detail.component.html',
-  styleUrls: ['./order-detail.component.css'],
+  styleUrls: [
+    './order-detail.component.layout-status.css',
+    './order-detail.component.items-actions.css',
+    './order-detail.component.print.css',
+    './order-detail.component.theme-overrides.css',
+  ],
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule]
 })

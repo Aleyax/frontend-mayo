@@ -54,6 +54,28 @@
   <section class="settings-card">
     <div class="settings-card-head">
       <div>
+        <h2>Flujo de Responsabilidad en Picking</h2>
+        <p>
+          Si esta activo: quien confirma la orden queda como responsable principal de picking,
+          solo ese usuario puede delegar, otros usuarios pueden solicitar responsabilidad y se permite responsabilidad compartida.
+        </p>
+      </div>
+      <label class="toggle-wrap">
+        <span>{{ pickingResponsibilityFlowEnabled() ? 'Activo' : 'Desactivado' }}</span>
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          [checked]="pickingResponsibilityFlowEnabled()"
+          [disabled]="loading() || saving()"
+          (change)="onTogglePickingResponsibilityFlow($event.target.checked)"
+        />
+      </label>
+    </div>
+  </section>
+
+  <section class="settings-card">
+    <div class="settings-card-head">
+      <div>
         <h2>Metodos de Pago en Marketplace</h2>
         <p>
           Define si el checkout del marketplace mostrara metodos de pago y cuales estaran disponibles para el cliente.
@@ -90,6 +112,27 @@
         }
       </div>
     }
+  </section>
+
+  <section class="settings-card">
+    <div class="settings-card-head">
+      <div>
+        <h2>IGV en Ecommerce</h2>
+        <p>
+          Define si el checkout del marketplace debe incluir IGV (18%) en el total.
+        </p>
+      </div>
+      <label class="toggle-wrap">
+        <span>{{ marketplaceIncludeIgv() ? 'Incluido' : 'No incluido' }}</span>
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          [checked]="marketplaceIncludeIgv()"
+          [disabled]="loading() || saving()"
+          (change)="onToggleMarketplaceIgv($event.target.checked)"
+        />
+      </label>
+    </div>
   </section>
 
   <app-alert></app-alert>

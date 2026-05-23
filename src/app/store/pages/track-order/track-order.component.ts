@@ -13,7 +13,7 @@ import { MarketplaceService } from '../../services/marketplace.service';
 import { MarketplaceAuthService } from '../../services/marketplace-auth.service';
 
 type OrdersQuery =
-  | { mode: 'auth'; token: string }
+  | { mode: 'auth' }
   | { mode: 'guest'; phone: string; email?: string; take?: number };
 
 type TrackQuery = {
@@ -77,7 +77,7 @@ export class TrackOrderComponent implements OnInit {
       }
 
       if (params.mode === 'auth') {
-        return this.marketplaceService.listMyOrdersAuthenticated(params.token).pipe(
+        return this.marketplaceService.listMyOrdersAuthenticated().pipe(
           map((response) => (Array.isArray(response?.data) ? response.data : [])),
         );
       }
@@ -212,13 +212,12 @@ export class TrackOrderComponent implements OnInit {
     this.trackQuery.set(null);
     this.detailCodeQuery.set(null);
 
-    const token = this.marketplaceAuthService.getToken();
-    const hasMarketplaceSession = !!token && this.marketplaceAuthService.isAuthenticated();
+    const hasMarketplaceSession = this.marketplaceAuthService.isAuthenticated();
 
     if (hasMarketplaceSession) {
       this.didRequestOrders.set(true);
       this.ordersRequestMode.set('auth');
-      this.ordersQuery.set({ mode: 'auth', token: token! });
+      this.ordersQuery.set({ mode: 'auth' });
       return;
     }
 

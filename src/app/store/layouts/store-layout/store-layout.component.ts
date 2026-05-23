@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -16,7 +16,7 @@ export class StoreLayoutComponent {
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
 
   readonly currentTheme = signal<'dark' | 'light'>(this.getSavedTheme());
-  readonly marketplaceUser = this.marketplaceAuthService.currentUser;
+  readonly marketplaceUser = computed(() => this.marketplaceAuthService.getCurrentUser());
 
   // Refreshes marketplace session declaratively when a persisted token exists.
   private readonly sessionResource = rxResource<boolean, true | undefined>({

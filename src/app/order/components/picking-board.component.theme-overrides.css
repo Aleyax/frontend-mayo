@@ -1,0 +1,84 @@
+
+.picking-table tbody tr:nth-child(odd),
+.picking-table tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--pick-surface) 90%, var(--pick-border)) !important;
+}
+
+.picking-table tbody tr:hover {
+  background: color-mix(in oklab, var(--pick-primary) 12%, var(--pick-surface)) !important;
+}
+
+.picking-table tr.completed {
+  background: color-mix(in oklab, var(--pick-success) 13%, var(--pick-surface));
+}
+
+.picking-table tr.completed td,
+.progress-badge .picked,
+.progress-text-large {
+  color: var(--pick-success);
+}
+
+.btn-minus,
+.btn-plus,
+.btn-mark-complete {
+  background: var(--pick-surface-soft);
+  border-color: var(--pick-border);
+  color: var(--pick-text);
+}
+
+.btn-request-action {
+  background: color-mix(in oklab, var(--pick-primary) 14%, var(--pick-surface));
+  border-color: color-mix(in oklab, var(--pick-primary) 45%, var(--pick-border));
+  color: var(--pick-text);
+}
+
+.btn-minus:hover:not(:disabled),
+.btn-plus:hover:not(:disabled),
+.btn-mark-complete:hover:not(:disabled),
+.btn-request-action:hover:not(:disabled) {
+  color: var(--pick-primary-content);
+}
+
+.btn-complete-order {
+  color: var(--pick-primary-content);
+  background: var(--pick-success);
+}
+
+.completion-final-message {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--pick-success) 45%, var(--pick-border));
+  background: color-mix(in oklab, var(--pick-success) 16%, var(--pick-surface));
+  color: color-mix(in oklab, var(--pick-success) 78%, var(--pick-text));
+  font-weight: 600;
+  text-align: center;
+}
+
+.picking-modal {
+  background: var(--pick-surface);
+  border-color: var(--pick-border);
+}
+
+.picking-modal-overlay {
+  background: color-mix(in oklab, #000 58%, transparent);
+}
+
+.item-contribution-badge,
+.pending-unpick-entry,
+.unpick-request-row > td {
+  border-color: var(--pick-border);
+  background: color-mix(in oklab, var(--pick-surface) 90%, var(--pick-border));
+  color: var(--pick-text);
+}
+
+.unpick-request-form-fields input {
+  border-color: var(--pick-border);
+  background: var(--pick-surface-soft);
+  color: var(--pick-text);
+}
+
+.pending-unpick-note,
+.pending-unpick-info {
+  color: var(--pick-muted);
+}

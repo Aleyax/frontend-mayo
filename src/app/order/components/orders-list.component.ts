@@ -1,4 +1,4 @@
-import { Component, computed, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -22,6 +22,12 @@ type OrdersQuery = OrdersFilters & {
   limit: number;
 };
 
+type ActiveFilterTag = {
+  key: keyof OrdersFilters;
+  label: string;
+  value: string;
+};
+
 type QuickStatusOption = {
   value: OrderStatus;
   label: string;
@@ -38,6 +44,7 @@ export class OrdersListComponent implements OnInit {
   private readonly appliedFilters = signal<OrdersFilters>({});
   readonly currentPage = signal(1);
   readonly pageSize = 10;
+  readonly showFiltersModal = signal(false);
   readonly quickStatusFilters: QuickStatusOption[] = [
     { value: 'PENDING', label: 'Pendiente' },
     { value: 'CONFIRMED', label: 'Confirmado' },
@@ -102,6 +109,39 @@ export class OrdersListComponent implements OnInit {
     const pagination = response?.pagination || {};
     return Math.max(1, Number(pagination?.totalPages || 1));
   });
+  readonly activeFilterTags = computed<ActiveFilterTag[]>(() => {
+    const filters = this.appliedFilters();
+    const tags: ActiveFilterTag[] = [];
+
+    if (filters.search) {
+      tags.push({ key: 'search', label: 'Buscar', value: filters.search });
+    }
+
+    if (filters.channel) {
+      tags.push({ key: 'channel', label: 'Canal', value: this.getChannelLabel(filters.channel) });
+    }
+
+    if (filters.status) {
+      tags.push({ key: 'status', label: 'Estado', value: this.getStatusLabel(filters.status) });
+    }
+
+    if (filters.storeId !== undefined) {
+      const store = this.stores().find((entry) => Number(entry?.id) === Number(filters.storeId));
+      const storeValue = store?.name || `ID ${filters.storeId}`;
+      tags.push({ key: 'storeId', label: 'Tienda', value: storeValue });
+    }
+
+    if (filters.startDate) {
+      tags.push({ key: 'startDate', label: 'Desde', value: this.formatDateForSummary(filters.startDate) });
+    }
+
+    if (filters.endDate) {
+      tags.push({ key: 'endDate', label: 'Hasta', value: this.formatDateForSummary(filters.endDate) });
+    }
+
+    return tags;
+  });
+  readonly activeFilterCount = computed<number>(() => this.activeFilterTags().length);
   readonly loading = computed<boolean>(() => this.ordersResource.isLoading());
   readonly loadError = computed<string>(() => this.extractOrderErrorMessage(this.ordersResource.error()));
   readonly quickStatusCounts = computed<Record<OrderStatus, number>>(() => this.quickStatusCountsResource.value());
@@ -164,6 +204,11 @@ export class OrdersListComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.closeFiltersModal();
   }
 
   initializeForm() {
@@ -303,6 +348,32 @@ export class OrdersListComponent implements OnInit {
     this.applyFilters();
   }
 
+  openFiltersModal() {
+    this.showFiltersModal.set(true);
+  }
+
+  closeFiltersModal() {
+    this.showFiltersModal.set(false);
+  }
+
+  applyFiltersFromModal() {
+    this.applyFilters();
+    this.closeFiltersModal();
+  }
+
+  clearFiltersFromModal() {
+    this.clearFilters();
+    this.closeFiltersModal();
+  }
+
+  removeFilter(key: keyof OrdersFilters) {
+    if (!this.filterForm) {
+      return;
+    }
+    this.filterForm.patchValue({ [key]: '' });
+    this.applyFilters();
+  }
+
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages()) {
       this.currentPage.set(page);
@@ -427,6 +498,23 @@ export class OrdersListComponent implements OnInit {
     if (channel === 'ECOMMERCE') return 'Ecommerce';
     if (channel === 'INTERNAL') return 'Interno';
     return 'No definido';
+  }
+
+  getChannelLabel(channel: string): string {
+    const normalized = String(channel || '').toUpperCase();
+    if (normalized === 'POS') return 'POS';
+    if (normalized === 'ECOMMERCE') return 'Ecommerce';
+    if (normalized === 'INTERNAL') return 'Interno';
+    return channel;
+  }
+
+  private formatDateForSummary(dateValue: string): string {
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) {
+      return dateValue;
+    }
+
+    return parsed.toLocaleDateString('es-PE');
   }
 
   getResponsibleLabel(order: any): string {

@@ -1,0 +1,242 @@
+
+.products-info {
+  color: var(--pos-muted);
+}
+
+.badge-price {
+  background: color-mix(in oklab, var(--pos-primary) 18%, transparent);
+}
+
+.badge-stock,
+.stock-info {
+  background: color-mix(in oklab, var(--pos-success) 16%, transparent);
+  color: var(--pos-success);
+}
+
+.badge-stock,
+.item-details .price,
+.item-subtotal span,
+.amount-display,
+.change-display,
+.stock-info p,
+.sales-table strong {
+  color: var(--pos-success);
+}
+
+.stock-info {
+  border-left-color: var(--pos-success);
+}
+
+.remote-fulfillment-banner {
+  border-color: color-mix(in oklab, var(--pos-primary) 35%, var(--pos-border));
+  background: color-mix(in oklab, var(--pos-primary) 12%, var(--pos-surface));
+  color: var(--pos-primary);
+}
+
+.remote-stock-panel {
+  border-color: var(--pos-border);
+  background: var(--pos-surface-soft);
+}
+
+.remote-stock-title {
+  color: var(--pos-text);
+}
+
+.remote-stock-option {
+  border-color: var(--pos-border);
+  background: var(--pos-surface);
+  color: var(--pos-text);
+}
+
+.remote-stock-option.active {
+  border-color: var(--pos-primary);
+  background: color-mix(in oklab, var(--pos-primary) 12%, var(--pos-surface));
+}
+
+.remote-stock-option strong {
+  color: var(--pos-primary);
+}
+
+.remote-stock-muted {
+  color: var(--pos-muted);
+}
+
+.selected-variant-summary {
+  background: var(--pos-surface-soft);
+  border-color: var(--pos-border);
+  color: var(--pos-text);
+}
+
+.size-btn.active {
+  background: color-mix(in oklab, var(--pos-primary) 18%, transparent);
+  border-color: var(--pos-primary);
+  color: var(--pos-primary);
+}
+
+.size-btn.no-stock {
+  border-color: color-mix(in oklab, var(--pos-error) 35%, var(--pos-border));
+  background: color-mix(in oklab, var(--pos-error) 10%, var(--pos-surface-soft));
+  color: color-mix(in oklab, var(--pos-error) 78%, var(--pos-text));
+}
+
+.size-btn:disabled {
+  color: color-mix(in oklab, var(--pos-text) 30%, transparent);
+}
+
+.cart-header button,
+.btn-remove,
+.btn-clear {
+  background: color-mix(in oklab, var(--pos-error) 18%, transparent);
+  color: var(--pos-error);
+}
+
+.btn-primary {
+  background: var(--pos-success);
+  color: var(--pos-success-content);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.btn-primary:disabled,
+.btn-secondary,
+.btn-checkout:disabled {
+  background: color-mix(in oklab, var(--pos-muted) 30%, var(--pos-surface));
+  color: var(--pos-muted);
+}
+
+.drawer-overlay,
+.modal-overlay {
+  background: color-mix(in oklab, black 55%, transparent);
+}
+
+.color-btn {
+  border-color: var(--pos-border);
+}
+
+.color-btn.active {
+  background: color-mix(in oklab, var(--pos-primary) 12%, var(--pos-surface-soft));
+  border-color: var(--pos-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--pos-primary) 24%, transparent);
+}
+
+/* ========== POS THEME POLISH ========== */
+.pos-wrapper {
+  box-shadow: none;
+}
+
+.pos-catalog,
+.cart-panel {
+  min-height: 0;
+}
+
+.products-grid,
+.cart-items,
+.drawer-body {
+  scrollbar-color: color-mix(in oklab, var(--pos-text) 22%, transparent) transparent;
+}
+
+.product-card {
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 4%, transparent);
+}
+
+.product-card:hover {
+  background: color-mix(in oklab, var(--pos-primary) 8%, var(--pos-surface-soft));
+}
+
+.badge {
+  border: 1px solid color-mix(in oklab, currentColor 22%, transparent);
+}
+
+.cart-panel {
+  background: var(--pos-surface);
+  border-left-color: color-mix(in oklab, var(--pos-border) 55%, transparent);
+  box-shadow: -10px 0 24px color-mix(in oklab, black 10%, transparent);
+}
+
+.cart-items {
+  background: var(--pos-surface);
+  border-bottom: 1px solid var(--pos-border);
+}
+
+.cart-summary {
+  background: var(--pos-surface);
+  color: var(--pos-text);
+}
+
+.cart-summary .summary-row {
+  color: var(--pos-muted);
+}
+
+.cart-summary .summary-row.total {
+  color: var(--pos-primary);
+}
+
+.cart-item {
+  background: var(--pos-surface);
+}
+
+.cart-item:hover {
+  background: color-mix(in oklab, var(--pos-primary) 5%, var(--pos-surface));
+}
+
+.item-quantity button,
+.item-quantity input {
+  background: var(--pos-surface-soft);
+  border-color: var(--pos-border);
+  color: var(--pos-text);
+}
+
+.btn-remove {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--pos-error) 22%, var(--pos-surface));
+  color: var(--pos-error);
+  font-weight: 800;
+}
+
+.btn-checkout {
+  min-height: 42px;
+  border-radius: 7px;
+  background: var(--pos-primary);
+  color: var(--pos-primary-content);
+}
+
+.btn-save-order {
+  min-height: 42px;
+  border-radius: 7px;
+  background: var(--pos-surface);
+  color: var(--pos-primary);
+  box-shadow: inset 0 0 0 1px var(--pos-primary);
+}
+
+.drawer-content {
+  border-left: 1px solid var(--pos-border);
+}
+
+.drawer-header,
+.drawer-footer {
+  background: var(--pos-surface);
+}
+
+.drawer-body {
+  background: var(--pos-surface);
+}
+
+.drawer-product-head .sku {
+  color: var(--pos-muted);
+}
+
+.variant-image {
+  border: 1px solid var(--pos-border);
+}
+
+.size-btn,
+.quantity-selector button,
+.quantity-selector input {
+  background: var(--pos-surface-soft);
+  border-color: var(--pos-border);
+  color: var(--pos-text);
+}

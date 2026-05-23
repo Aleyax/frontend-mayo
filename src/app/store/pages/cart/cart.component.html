@@ -88,10 +88,12 @@
           <span>Subtotal</span>
           <strong>S/ {{ subtotal() | number: '1.2-2' }}</strong>
         </div>
-        <div class="summary-line">
-          <span>IGV (18%)</span>
-          <strong>S/ {{ tax() | number: '1.2-2' }}</strong>
-        </div>
+        @if (includeIgv()) {
+          <div class="summary-line">
+            <span>{{ igvLabel }}</span>
+            <strong>S/ {{ tax() | number: '1.2-2' }}</strong>
+          </div>
+        }
         <div class="summary-line total">
           <span>Total</span>
           <strong>S/ {{ total() | number: '1.2-2' }}</strong>

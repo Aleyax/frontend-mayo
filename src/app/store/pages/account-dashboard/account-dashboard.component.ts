@@ -50,28 +50,20 @@ export class AccountDashboardComponent implements OnInit {
     defaultValue: null,
   });
 
-  readonly ordersResource = rxResource<MarketplaceMyOrderSummary[], { token: string; refresh: number } | undefined>({
+  readonly ordersResource = rxResource<MarketplaceMyOrderSummary[], number | undefined>({
     params: () => {
-      if (!this.canLoad()) {
+      if (!this.canLoad() || !this.marketplaceAuthService.isAuthenticated()) {
         return undefined;
       }
 
-      const token = this.marketplaceAuthService.getToken();
-      if (!token) {
-        return undefined;
-      }
-
-      return {
-        token,
-        refresh: this.ordersReloadVersion(),
-      };
+      return this.ordersReloadVersion();
     },
     stream: ({ params }) => {
-      if (!params?.token) {
+      if (params === undefined) {
         return of([]);
       }
 
-      return this.marketplaceService.listMyOrdersAuthenticated(params.token).pipe(
+      return this.marketplaceService.listMyOrdersAuthenticated().pipe(
         map((response) => (Array.isArray(response?.data) ? response.data : [])),
       );
     },

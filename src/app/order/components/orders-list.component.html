@@ -4,7 +4,21 @@
     <p>Visualiza y gestiona todos los pedidos del sistema.</p>
   </div>
 
-  <div class="filters-section">
+  <div class="filters-shell">
+    <div class="filters-toolbar">
+      <div class="filters-toolbar-copy">
+        <h2>Filtros</h2>
+        <p>Aplica filtros avanzados en un panel mas limpio.</p>
+      </div>
+
+      <button type="button" class="filters-open-btn" (click)="openFiltersModal()">
+        <span>Filtros</span>
+        @if (activeFilterCount() > 0) {
+          <span class="filters-open-count">{{ activeFilterCount() }}</span>
+        }
+      </button>
+    </div>
+
     <div class="quick-status-section">
       <span class="quick-status-title">Filtros rapidos</span>
       <div class="quick-status-list">
@@ -22,62 +36,95 @@
       </div>
     </div>
 
-    <form [formGroup]="filterForm" class="filters-grid" (ngSubmit)="applyFilters()">
-      <div class="filter-group">
-        <label for="searchFilter">Buscar</label>
-        <input
-          id="searchFilter"
-          type="text"
-          formControlName="search"
-          class="filter-input input input-bordered w-full"
-          placeholder="Codigo, cliente, correo o telefono"
-        />
+    @if (activeFilterTags().length > 0) {
+      <div class="active-filters">
+        @for (tag of activeFilterTags(); track tag.key) {
+          <button type="button" class="active-filter-chip" (click)="removeFilter(tag.key)" [title]="'Quitar ' + tag.label">
+            <span class="active-filter-label">{{ tag.label }}:</span>
+            <span>{{ tag.value }}</span>
+            <span class="active-filter-remove" aria-hidden="true">x</span>
+          </button>
+        }
+        <button type="button" class="active-filters-clear" (click)="clearFilters()">Limpiar todo</button>
       </div>
-
-      <div class="filter-group">
-        <label for="channelFilter">Canal</label>
-        <select id="channelFilter" formControlName="channel" class="filter-input select select-bordered w-full">
-          @for (channel of channelOptions; track channel.value) {
-            <option [value]="channel.value">{{ channel.label }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="statusFilter">Estado</label>
-        <select id="statusFilter" formControlName="status" class="filter-input select select-bordered w-full">
-          @for (status of statusOptions; track status.value) {
-            <option [value]="status.value">{{ status.label }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="storeFilter">Tienda</label>
-        <select id="storeFilter" formControlName="storeId" class="filter-input select select-bordered w-full">
-          <option value="">Todas las tiendas</option>
-          @for (store of stores(); track store.id) {
-            <option [value]="store.id">{{ store.name }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="fromDate">Desde</label>
-        <input id="fromDate" type="date" formControlName="startDate" class="filter-input input input-bordered w-full" />
-      </div>
-
-      <div class="filter-group">
-        <label for="toDate">Hasta</label>
-        <input id="toDate" type="date" formControlName="endDate" class="filter-input input input-bordered w-full" />
-      </div>
-
-      <div class="filter-buttons">
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-        <button type="button" (click)="clearFilters()" class="btn btn-outline">Limpiar</button>
-      </div>
-    </form>
+    } @else {
+      <div class="active-filters-empty">Sin filtros avanzados aplicados.</div>
+    }
   </div>
+
+  @if (showFiltersModal()) {
+    <div class="filters-modal-overlay" (click)="closeFiltersModal()">
+      <section class="filters-modal" role="dialog" aria-modal="true" aria-label="Filtros de ordenes" (click)="$event.stopPropagation()">
+        <header class="filters-modal-header">
+          <div>
+            <h3>Filtrar ordenes</h3>
+            <p>Busca por cliente, canal, estado, tienda o fechas.</p>
+          </div>
+          <button type="button" class="filters-modal-close" (click)="closeFiltersModal()" aria-label="Cerrar filtros">
+            x
+          </button>
+        </header>
+
+        <form [formGroup]="filterForm" class="filters-modal-body" (ngSubmit)="applyFiltersFromModal()">
+          <div class="filters-grid">
+            <div class="filter-group filter-group--full">
+              <label for="searchFilter">Buscar</label>
+              <input
+                id="searchFilter"
+                type="text"
+                formControlName="search"
+                class="filter-input input input-bordered w-full"
+                placeholder="Codigo, cliente, correo o telefono"
+              />
+            </div>
+
+            <div class="filter-group">
+              <label for="channelFilter">Canal</label>
+              <select id="channelFilter" formControlName="channel" class="filter-input select select-bordered w-full">
+                @for (channel of channelOptions; track channel.value) {
+                  <option [value]="channel.value">{{ channel.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="statusFilter">Estado</label>
+              <select id="statusFilter" formControlName="status" class="filter-input select select-bordered w-full">
+                @for (status of statusOptions; track status.value) {
+                  <option [value]="status.value">{{ status.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="storeFilter">Tienda</label>
+              <select id="storeFilter" formControlName="storeId" class="filter-input select select-bordered w-full">
+                <option value="">Todas las tiendas</option>
+                @for (store of stores(); track store.id) {
+                  <option [value]="store.id">{{ store.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="fromDate">Desde</label>
+              <input id="fromDate" type="date" formControlName="startDate" class="filter-input input input-bordered w-full" />
+            </div>
+
+            <div class="filter-group">
+              <label for="toDate">Hasta</label>
+              <input id="toDate" type="date" formControlName="endDate" class="filter-input input input-bordered w-full" />
+            </div>
+          </div>
+
+          <div class="filter-buttons">
+            <button type="button" (click)="clearFiltersFromModal()" class="btn btn-outline">Limpiar</button>
+            <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
 
   <div class="table-section">
     @if (loading()) {
