@@ -46,3 +46,8 @@
   content: attr(data-placeholder);
   color: color-mix(in oklab, var(--color-base-content, #0f172a) 45%, transparent);
 }
+
+.marketplace-variants-panel {
+  border-top: 1px solid color-mix(in oklab, var(--color-base-content, #0f172a) 12%, transparent);
+  padding-top: 0.75rem;
+}

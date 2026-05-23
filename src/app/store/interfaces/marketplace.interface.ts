@@ -1,5 +1,7 @@
 export interface MarketplaceProductVariant {
   id: number;
+  sourceVariantId?: number;
+  isVirtualMarketplaceVariant?: boolean;
   sku: string;
   barcode?: string | null;
   price: number;

@@ -24,7 +24,7 @@
             </header>
 
             <div class="items-list">
-              @for (item of group.items; track item.variantId) {
+              @for (item of group.items; track item.cartKey) {
                 <div class="item-row">
                   <div class="variant-meta">
                     <strong>{{ item.colorName }} / {{ item.sizeName }}</strong>
@@ -40,12 +40,12 @@
                       type="number"
                       min="0"
                       [value]="item.quantity"
-                      (input)="updateQty(item.variantId, +$any($event.target).value)"
+                      (input)="updateQty(item.cartKey, +$any($event.target).value)"
                     />
                     <p class="line-total">
                       S/ {{ item.quantity * item.unitPrice | number: '1.2-2' }}
                     </p>
-                    <button type="button" (click)="removeVariant(item.variantId)">Quitar</button>
+                    <button type="button" (click)="removeVariant(item.cartKey)">Quitar</button>
                   </div>
                 </div>
               }

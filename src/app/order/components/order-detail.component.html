@@ -125,7 +125,7 @@
 
               @if (getReturnPendingItems().length > 0) {
                 <div class="return-task-list">
-                  @for (item of getReturnPendingItems(); track item.id ?? item.variantId ?? $index) {
+                  @for (item of getReturnPendingItems(); track getOrderItemTrackKey(item, $index)) {
                     <div class="return-task-item">
                       <div class="return-task-main">
                         <strong>{{ getReturnItemLabel(item) }}</strong>
@@ -276,7 +276,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+            @for (item of order.items; track getOrderItemTrackKey(item, $index)) {
               <tr>
                 <td>{{ item.variant?.product?.name }}</td>
                 <td>{{ item.variant?.color?.name }} - {{ item.variant?.size?.name }}</td>
@@ -299,7 +299,7 @@
         </table>
 
         <div class="mobile-table-cards mobile-only">
-          @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+          @for (item of order.items; track getOrderItemTrackKey(item, $index)) {
             <article class="mobile-row-card">
               <div class="mobile-row-header">
                 <h4 class="mobile-row-title">{{ item.variant?.product?.name || 'Producto' }}</h4>
@@ -386,7 +386,7 @@
             <tbody>
               @for (
                 item of getPickingItemsForDetail();
-                track item.pickingItemId ?? item.variantId ?? $index
+                track getPickingDetailTrackKey(item, $index)
               ) {
                 <tr>
                   <td>{{ item.variant?.product?.name || '-' }}</td>
@@ -451,7 +451,7 @@
           <div class="mobile-table-cards mobile-only">
             @for (
               item of getPickingItemsForDetail();
-              track item.pickingItemId ?? item.variantId ?? $index
+              track getPickingDetailTrackKey(item, $index)
             ) {
               <article class="mobile-row-card">
                 <div class="mobile-row-header">
@@ -804,7 +804,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+            @for (item of order.items; track getOrderItemTrackKey(item, $index)) {
               <tr>
                 <td>{{ item.quantity }}</td>
                 <td>UND</td>
@@ -853,7 +853,7 @@
         <div class="ticket-divider"></div>
 
         <div class="ticket-items">
-          @for (item of order.items; track item.id ?? item.variantId ?? $index) {
+          @for (item of order.items; track getOrderItemTrackKey(item, $index)) {
             <div class="ticket-item">
               <p class="ticket-item-name">{{ getPrintItemDescription(item) }}</p>
               <p class="ticket-item-line">

@@ -1,18 +1,18 @@
 
 .summary-footer {
   margin-top: 1rem;
-  border: 1px solid color-mix(in oklab, var(--mkd-primary) 30%, var(--mkd-border));
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--mkd-primary) 10%, var(--mkd-surface));
-  padding: 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.75rem 0;
 }
 
 .product-description-card {
   margin-top: 1rem;
-  border: 1px solid var(--mkd-border);
-  border-radius: 12px;
-  background: var(--mkd-surface);
-  padding: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 1rem 0;
 }
 
 .product-description-card h3 {
@@ -25,6 +25,14 @@
   margin-top: 0.75rem;
   color: var(--mkd-text);
   line-height: 1.55;
+}
+
+.product-description-body :where(*) {
+  color: var(--mkd-text) !important;
+}
+
+.product-description-body :where(a) {
+  color: var(--mkd-accent) !important;
 }
 
 .product-description-body :is(p, ul, ol, blockquote, table) {

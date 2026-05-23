@@ -127,6 +127,9 @@ export class CheckoutComponent implements OnInit {
         variantId: item.variantId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
+        colorName: item.colorName,
+        sizeName: item.sizeName,
+        displayVariantId: item.displayVariantId,
       })),
     }).subscribe({
       next: (response) => {

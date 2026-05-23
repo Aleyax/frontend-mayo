@@ -25,7 +25,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  border: 1px solid var(--mk-border);
+  border: 0;
   border-radius: 14px;
   background: radial-gradient(
     circle at top right,
@@ -338,7 +338,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: #0b63ce;
+  background: var(--mk-primary);
   color: #ffffff;
   text-decoration: none;
   padding: 0.55rem 0.75rem;

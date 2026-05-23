@@ -42,6 +42,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
   submitted = false;
   editingProduct = signal<Product | null>(null);
   variants = signal<ProductVariantForm[]>([]);
+  marketplaceVariants = signal<ProductVariantForm[]>([]);
+  marketplaceVariantsEnabled = signal(false);
   productImages = signal<Array<{ file?: File; preview: string; url?: string; publicId?: string }>>([]);
   variantMode = signal<ProductVariantMode>('MATRIX');
   selectedColorIds = signal<number[]>([]);
@@ -77,6 +79,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
     this.formError.set('');
     this.formMessage.set('');
     this.variants.set([]);
+    this.marketplaceVariants.set([]);
+    this.marketplaceVariantsEnabled.set(false);
     this.productImages.set([]);
     this.variantMode.set('MATRIX');
     this.selectedColorIds.set([]);
@@ -98,8 +102,11 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
 
       if (isSimpleProduct) {
         const firstVariant = productVariants[0];
-        this.selectedColorIds.set([]);
-        this.selectedSizeIds.set([]);
+        const marketplaceColorIds = (product.marketplaceVariantColorIds || []).filter((id) => Number(id) > 0);
+        const marketplaceSizeIds = (product.marketplaceVariantSizeIds || []).filter((id) => Number(id) > 0);
+        const hasMarketplaceVariants = marketplaceColorIds.length > 0 && marketplaceSizeIds.length > 0;
+        this.selectedColorIds.set(hasMarketplaceVariants ? marketplaceColorIds : []);
+        this.selectedSizeIds.set(hasMarketplaceVariants ? marketplaceSizeIds : []);
         this.variants.set(firstVariant ? [{
           id: firstVariant.id,
           sku: firstVariant.sku,
@@ -115,6 +122,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
           price: 0,
           isActive: true,
         }]);
+        this.marketplaceVariantsEnabled.set(hasMarketplaceVariants);
+        this.rebuildMarketplaceVariantsFromSelections();
       } else if (isSizeOnlyProduct) {
         const productSizeIds = productVariants.map((variant) => variant.sizeId).filter((id) => id > 0);
         this.selectedColorIds.set([]);
@@ -131,6 +140,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
             imagePreview: variant.imageUrl || undefined,
           })),
         );
+        this.marketplaceVariants.set([]);
+        this.marketplaceVariantsEnabled.set(false);
       } else {
         const productVariantIds = productVariants.map((variant) => variant.colorId);
         const productSizeIds = productVariants.map((variant) => variant.sizeId);
@@ -149,6 +160,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
             imagePreview: variant.imageUrl || undefined,
           })),
         );
+        this.marketplaceVariants.set([]);
+        this.marketplaceVariantsEnabled.set(false);
       }
       this.productImages.set(
         (product.images || []).map((image) => {
@@ -178,6 +191,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
         isActive: true,
       });
       this.variantMode.set('MATRIX');
+      this.marketplaceVariants.set([]);
+      this.marketplaceVariantsEnabled.set(false);
       this.syncDescriptionEditorWithForm();
       this.productForm.markAsPristine();
       this.productForm.markAsUntouched();
@@ -309,6 +324,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
       const firstVariant = this.variants()[0];
       this.selectedColorIds.set([]);
       this.selectedSizeIds.set([]);
+      this.marketplaceVariants.set([]);
+      this.marketplaceVariantsEnabled.set(false);
       this.variants.set([{
         colorId: firstVariant?.colorId ?? 0,
         sizeId: firstVariant?.sizeId ?? 0,
@@ -323,10 +340,14 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
 
     if (mode === 'SIZE_ONLY') {
       this.selectedColorIds.set([]);
+      this.marketplaceVariants.set([]);
+      this.marketplaceVariantsEnabled.set(false);
       this.variants.set([]);
       return;
     }
 
+    this.marketplaceVariants.set([]);
+    this.marketplaceVariantsEnabled.set(false);
     this.variants.set([]);
   }
 
@@ -338,6 +359,59 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
     return this.variantMode() === 'SIZE_ONLY';
   }
 
+  async toggleMarketplaceVariants(enabled: boolean) {
+    this.variantsDirty.set(true);
+    this.marketplaceVariantsEnabled.set(enabled);
+    this.marketplaceVariants.set([]);
+    this.formError.set('');
+
+    if (!enabled) {
+      this.selectedColorIds.set([]);
+      this.selectedSizeIds.set([]);
+      return;
+    }
+
+    const allColorIds = this.colors.map((color) => color.id);
+    const allSizeIds = this.sizes.map((size) => size.id);
+
+    this.selectedColorIds.set(allColorIds);
+    this.selectedSizeIds.set(allSizeIds);
+
+    if (allColorIds.length && allSizeIds.length) {
+      await this.generateMarketplaceVariants();
+    }
+  }
+
+  private rebuildMarketplaceVariantsFromSelections() {
+    if (!this.isSimpleMode || !this.marketplaceVariantsEnabled()) {
+      this.marketplaceVariants.set([]);
+      return;
+    }
+
+    const baseVariant = this.variants()[0];
+    const colors = this.selectedColorIds();
+    const sizes = this.selectedSizeIds();
+
+    if (!baseVariant || !colors.length || !sizes.length) {
+      this.marketplaceVariants.set([]);
+      return;
+    }
+
+    const generated: ProductVariantForm[] = [];
+    for (const colorId of colors) {
+      for (const sizeId of sizes) {
+        generated.push({
+          colorId,
+          sizeId,
+          price: Number(baseVariant.price || 0),
+          isActive: true,
+        });
+      }
+    }
+
+    this.marketplaceVariants.set(generated);
+  }
+
   toggleColor(colorId: number, checked: boolean) {
     const current = this.selectedColorIds();
     this.variantsDirty.set(true);
@@ -345,6 +419,9 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
       this.selectedColorIds.set([...current, colorId]);
     } else {
       this.selectedColorIds.set(current.filter((id) => id !== colorId));
+    }
+    if (this.isSimpleMode && this.marketplaceVariantsEnabled()) {
+      this.rebuildMarketplaceVariantsFromSelections();
     }
   }
 
@@ -355,6 +432,9 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
       this.selectedSizeIds.set([...current, sizeId]);
     } else {
       this.selectedSizeIds.set(current.filter((id) => id !== sizeId));
+    }
+    if (this.isSimpleMode && this.marketplaceVariantsEnabled()) {
+      this.rebuildMarketplaceVariantsFromSelections();
     }
   }
 
@@ -414,6 +494,38 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
 
     this.variants.set(mergedVariants);
     this.variantsDirty.set(true);
+  }
+
+  async generateMarketplaceVariants() {
+    this.formError.set('');
+
+    if (!this.isSimpleMode || !this.marketplaceVariantsEnabled()) {
+      return;
+    }
+
+    const colors = this.selectedColorIds();
+    const sizes = this.selectedSizeIds();
+
+    if (!colors.length || !sizes.length) {
+      this.formError.set('Selecciona al menos un color y una talla para variantes de marketplace.');
+      return;
+    }
+
+    const baseVariant = this.variants()[0];
+    if (!baseVariant) {
+      this.formError.set('Configura primero la variante unica del producto.');
+      return;
+    }
+
+    const response = await firstValueFrom(this.productService.generateVariants({ colorIds: colors, sizeIds: sizes }));
+    const generated = response.variants.map((variant) => ({
+      colorId: variant.colorId,
+      sizeId: variant.sizeId,
+      price: Number(baseVariant.price || 0),
+      isActive: true,
+    } as ProductVariantForm));
+
+    this.marketplaceVariants.set(generated);
   }
 
   onVariantPriceChange(index: number, value: string) {
@@ -576,6 +688,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
     const categoryId = Number(this.productForm.value.categoryId);
     const isActive = this.productForm.value.isActive;
     const mode = this.variantMode();
+    const shouldPersistMarketplaceDimensions =
+      this.isSimpleMode && this.marketplaceVariantsEnabled() && this.marketplaceVariants().length > 0;
 
     const currentVariants = this.variants();
     const shouldValidateVariants = !this.isEditing || this.variantsDirty();
@@ -594,6 +708,11 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
         this.formError.set('Cada variante debe tener un precio mayor que 0.');
         return;
       }
+    }
+
+    if (this.isSimpleMode && this.marketplaceVariantsEnabled() && this.marketplaceVariants().length === 0) {
+      this.formError.set('Genera las variantes para marketplace o desactiva la opcion antes de guardar.');
+      return;
     }
 
     if (this.isEditing) {
@@ -621,8 +740,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
       if (this.variantsDirty()) {
         const payloadVariants = await this.buildVariantPayload(currentVariants, mode);
         payload.variantMode = mode;
-        payload.colorIds = mode === 'MATRIX' ? this.selectedColorIds() : [];
-        payload.sizeIds = this.isSimpleMode ? [] : this.selectedSizeIds();
+        payload.colorIds = mode === 'MATRIX' || shouldPersistMarketplaceDimensions ? this.selectedColorIds() : [];
+        payload.sizeIds = this.isSimpleMode && !shouldPersistMarketplaceDimensions ? [] : this.selectedSizeIds();
         payload.variants = payloadVariants;
       }
 
@@ -647,8 +766,8 @@ export class ProductModalComponent implements OnInit, AfterViewInit {
       description,
       categoryId,
       variantMode: mode,
-      colorIds: mode === 'MATRIX' ? this.selectedColorIds() : [],
-      sizeIds: this.isSimpleMode ? [] : this.selectedSizeIds(),
+      colorIds: mode === 'MATRIX' || shouldPersistMarketplaceDimensions ? this.selectedColorIds() : [],
+      sizeIds: this.isSimpleMode && !shouldPersistMarketplaceDimensions ? [] : this.selectedSizeIds(),
       imageFiles: imageFiles.length ? imageFiles : undefined,
       variants: payloadVariants,
     };

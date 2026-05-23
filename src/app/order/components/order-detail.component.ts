@@ -132,7 +132,7 @@ export class OrderDetailComponent implements OnInit {
   printLayout: PrintLayout = 'invoice';
   startingPicking = false;
   finishingPicking = false;
-  updatingPickingItemIds = new Set<number>();
+  updatingPickingItemIds = new Set<string>();
 
   orderStatusLabels: Record<string, string> = {
     PENDING: 'Pendiente',
@@ -737,10 +737,57 @@ export class OrderDetailComponent implements OnInit {
     return match?.[1]?.trim() || '-';
   }
 
+  getOrderItemTrackKey(item: any, index: number): string {
+    const orderItemId = this.getOrderItemId(item);
+    if (orderItemId > 0) {
+      return `order-item:${orderItemId}`;
+    }
+
+    const variantId = this.getNormalizedVariantId(item);
+    if (variantId > 0) {
+      return `order-variant:${variantId}:${index}`;
+    }
+
+    return `order-index:${index}`;
+  }
+
+  getPickingDetailTrackKey(item: any, index: number): string {
+    const orderItemId = this.getOrderItemId(item);
+    if (orderItemId > 0) {
+      return `picking-order-item:${orderItemId}`;
+    }
+
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (Number.isInteger(pickingItemId) && pickingItemId > 0) {
+      return `picking-item:${pickingItemId}`;
+    }
+
+    const variantId = this.getNormalizedVariantId(item);
+    if (variantId > 0) {
+      return `picking-variant:${variantId}:${index}`;
+    }
+
+    return `picking-index:${index}`;
+  }
+
   getPickedQuantity(item: any): number {
-    const sessionItems = this.order?.pickingSession?.items || [];
-    const match = sessionItems.find((sessionItem: any) => Number(sessionItem.variantId) === Number(item.variantId));
-    return Number(match?.pickedQuantity || 0);
+    const orderItemId = this.getOrderItemId(item);
+    const variantId = this.getNormalizedVariantId(item);
+    const variantKey = this.getVariantKey(item);
+
+    const pickingItems = Array.isArray(this.pickingData?.items) ? this.pickingData.items : [];
+    const pickingMatch = this.findPickedItemMatch(pickingItems, orderItemId, variantId, variantKey);
+    if (pickingMatch) {
+      return Math.max(0, Number(pickingMatch?.pickedQuantity || 0));
+    }
+
+    const sessionItems = Array.isArray(this.order?.pickingSession?.items) ? this.order.pickingSession.items : [];
+    const sessionMatch = this.findPickedItemMatch(sessionItems, orderItemId, variantId, variantKey);
+    if (sessionMatch) {
+      return Math.max(0, Number(sessionMatch?.pickedQuantity || 0));
+    }
+
+    return Math.max(0, Number(item?.pickedQuantity ?? item?.picked ?? 0));
   }
 
   getPickingStatus(item: any): 'PENDING' | 'PARTIAL' | 'COMPLETED' {
@@ -780,7 +827,8 @@ export class OrderDetailComponent implements OnInit {
       const missingQuantity = Math.max(0, requestedQuantity - pickedQuantity);
       return {
         pickingItemId: null,
-        variantId: item?.variantId,
+        orderItemId: this.getOrderItemId(item),
+        variantId: this.getNormalizedVariantId(item),
         variant: item?.variant,
         requestedQuantity,
         pickedQuantity,
@@ -854,8 +902,8 @@ export class OrderDetailComponent implements OnInit {
   }
 
   isPickingItemUpdating(item: any): boolean {
-    const itemId = Number(item?.pickingItemId || 0);
-    return itemId > 0 && this.updatingPickingItemIds.has(itemId);
+    const updateKey = this.getPickingUpdateKey(item);
+    return updateKey.length > 0 && this.updatingPickingItemIds.has(updateKey);
   }
 
   startPickingFromDetail() {
@@ -877,33 +925,132 @@ export class OrderDetailComponent implements OnInit {
   }
 
   markPickingItemFromDetail(item: any, action: 'inc' | 'dec' | 'complete') {
+    const orderId = Number(this.orderId() || this.order?.id || 0);
+    const orderItemId = this.getOrderItemId(item);
     const pickingItemId = Number(item?.pickingItemId || 0);
-    if (!pickingItemId || this.updatingPickingItemIds.has(pickingItemId)) {
+    const updateKey = this.getPickingUpdateKey(item);
+
+    if (!updateKey || this.updatingPickingItemIds.has(updateKey)) {
       return;
     }
 
-    const maxPickable = this.getPickingItemLimit(item);
-    const current = Number(item?.pickedQuantity || 0);
-    let nextQuantity = current;
+    const nextQuantity = this.resolveNextPickingUpdateQuantity(item, action);
+    const currentRequestedQuantity = Number(item?.pickedQuantity || 0);
+    const hasMeaningfulChange = nextQuantity !== currentRequestedQuantity;
 
-    if (action === 'inc') nextQuantity = Math.min(maxPickable, current + 1);
-    if (action === 'dec') nextQuantity = Math.max(0, current - 1);
-    if (action === 'complete') nextQuantity = maxPickable;
+    if (!hasMeaningfulChange) return;
 
-    if (nextQuantity === current) return;
+    const request$ = orderItemId > 0 && orderId > 0
+      ? this.orderService.updatePickingOrderItem(orderId, orderItemId, nextQuantity)
+      : (pickingItemId > 0 ? this.orderService.updatePickingItem(pickingItemId, nextQuantity) : null);
 
-    this.updatingPickingItemIds.add(pickingItemId);
-    this.orderService.updatePickingItem(pickingItemId, nextQuantity).subscribe({
-      next: () => {
-        this.updatingPickingItemIds.delete(pickingItemId);
+    if (!request$) {
+      return;
+    }
+
+    this.updatingPickingItemIds.add(updateKey);
+    request$.subscribe({
+      next: (response: any) => {
+        const refreshedPicking = response?.data || response;
+        const currentOrderId = Number(this.orderId() || this.order?.id || 0);
+        if (
+          refreshedPicking &&
+          Number(refreshedPicking.orderId || 0) > 0 &&
+          Number(refreshedPicking.orderId || 0) === currentOrderId
+        ) {
+          this.cachedPickingData = refreshedPicking;
+        }
+
+        this.updatingPickingItemIds.delete(updateKey);
         this.orderResource.reload();
         this.pickingResource.reload();
       },
       error: (error) => {
-        this.updatingPickingItemIds.delete(pickingItemId);
+        this.updatingPickingItemIds.delete(updateKey);
         this.alertService.show(error?.error?.error || 'No se pudo actualizar item de picking', 'error');
       }
     });
+  }
+
+  private resolveNextPickingUpdateQuantity(item: any, action: 'inc' | 'dec' | 'complete'): number {
+    const currentRowQuantity = Math.max(0, Number(item?.pickedQuantity || 0));
+    const rowLimit = this.getPickingItemLimit(item);
+
+    let targetRowQuantity = currentRowQuantity;
+    if (action === 'inc') targetRowQuantity = Math.min(rowLimit, currentRowQuantity + 1);
+    if (action === 'dec') targetRowQuantity = Math.max(0, currentRowQuantity - 1);
+    if (action === 'complete') targetRowQuantity = rowLimit;
+
+    const orderItemId = this.getOrderItemId(item);
+    if (orderItemId > 0) {
+      return targetRowQuantity;
+    }
+
+    const groupedItems = this.getPickingGroupItems(item);
+    if (groupedItems.length <= 1) {
+      return targetRowQuantity;
+    }
+
+    const groupCurrentTotal = groupedItems.reduce(
+      (sum: number, groupItem: any) => sum + Math.max(0, Number(groupItem?.pickedQuantity || 0)),
+      0
+    );
+    const groupLimitTotal = groupedItems.reduce(
+      (sum: number, groupItem: any) => sum + this.getPickingItemLimit(groupItem),
+      0
+    );
+    const delta = targetRowQuantity - currentRowQuantity;
+    const nextGroupTotal = groupCurrentTotal + delta;
+
+    return Math.max(0, Math.min(groupLimitTotal, nextGroupTotal));
+  }
+
+  private getPickingUpdateKey(item: any): string {
+    const orderItemId = this.getOrderItemId(item);
+    if (orderItemId > 0) {
+      return `order-item:${orderItemId}`;
+    }
+
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (Number.isInteger(pickingItemId) && pickingItemId > 0) {
+      return `picking-item:${pickingItemId}`;
+    }
+
+    const variantId = this.getNormalizedVariantId(item);
+    if (variantId > 0) {
+      return `variant:${variantId}`;
+    }
+
+    return '';
+  }
+
+  private getPickingGroupItems(item: any): any[] {
+    const pickingItems = Array.isArray(this.pickingData?.items) ? this.pickingData.items : [];
+    if (!Array.isArray(pickingItems) || pickingItems.length === 0) {
+      return [item];
+    }
+
+    const pickingItemId = Number(item?.pickingItemId || 0);
+    if (pickingItemId > 0) {
+      const groupedByPickingItemId = pickingItems.filter(
+        (candidate: any) => Number(candidate?.pickingItemId || 0) === pickingItemId
+      );
+      if (groupedByPickingItemId.length > 0) {
+        return groupedByPickingItemId;
+      }
+    }
+
+    const variantId = this.getNormalizedVariantId(item);
+    if (variantId > 0) {
+      const groupedByVariantId = pickingItems.filter(
+        (candidate: any) => this.getNormalizedVariantId(candidate) === variantId
+      );
+      if (groupedByVariantId.length > 0) {
+        return groupedByVariantId;
+      }
+    }
+
+    return [item];
   }
 
   completePickingFromDetail() {
@@ -1031,6 +1178,69 @@ export class OrderDetailComponent implements OnInit {
         const dateB = b.date ? b.date.getTime() : 0;
         return dateA - dateB;
       });
+  }
+
+  private getOrderItemId(item: any): number {
+    const rawId = Number(item?.orderItemId ?? item?.itemId ?? item?.id ?? 0);
+    return Number.isInteger(rawId) && rawId > 0 ? rawId : 0;
+  }
+
+  private getNormalizedVariantId(item: any): number {
+    const rawVariantId = Number(item?.variantId ?? item?.variant?.id ?? 0);
+    return Number.isInteger(rawVariantId) && rawVariantId > 0 ? rawVariantId : 0;
+  }
+
+  private getVariantKey(item: any): string {
+    const colorId = Number(item?.colorId ?? item?.variant?.color?.id ?? 0);
+    const sizeId = Number(item?.sizeId ?? item?.variant?.size?.id ?? 0);
+
+    const normalizedColorId = Number.isInteger(colorId) && colorId > 0 ? colorId : 0;
+    const normalizedSizeId = Number.isInteger(sizeId) && sizeId > 0 ? sizeId : 0;
+
+    if (normalizedColorId <= 0 && normalizedSizeId <= 0) {
+      return '';
+    }
+
+    return `${normalizedColorId}-${normalizedSizeId}`;
+  }
+
+  private findPickedItemMatch(
+    items: any[],
+    orderItemId: number,
+    variantId: number,
+    variantKey: string
+  ): any | null {
+    if (!Array.isArray(items) || items.length === 0) {
+      return null;
+    }
+
+    if (orderItemId > 0) {
+      const byOrderItemId = items.find((entry: any) => this.getPickedEntryOrderItemId(entry) === orderItemId);
+      if (byOrderItemId) {
+        return byOrderItemId;
+      }
+    }
+
+    if (variantId > 0) {
+      const byVariantId = items.find((entry: any) => this.getNormalizedVariantId(entry) === variantId);
+      if (byVariantId) {
+        return byVariantId;
+      }
+    }
+
+    if (variantKey) {
+      const byVariantKey = items.find((entry: any) => this.getVariantKey(entry) === variantKey);
+      if (byVariantKey) {
+        return byVariantKey;
+      }
+    }
+
+    return null;
+  }
+
+  private getPickedEntryOrderItemId(item: any): number {
+    const rawId = Number(item?.orderItemId ?? item?.itemId ?? 0);
+    return Number.isInteger(rawId) && rawId > 0 ? rawId : 0;
   }
 
   private resolveOrderErrorMessage(rawError: unknown): string {

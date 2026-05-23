@@ -87,6 +87,11 @@ export class OrderService {
     return this.http.patch(`${this.apiUrl}/picking/items/${itemId}`, { pickedQuantity });
   }
 
+  // Actualizar picking por fila de orden (orderItem)
+  updatePickingOrderItem(orderId: number, orderItemId: number, pickedQuantity: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${orderId}/picking/order-items/${orderItemId}`, { pickedQuantity });
+  }
+
   requestPickingUnpickAction(orderId: number, itemId: number, quantity: number, note?: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/${orderId}/picking/items/${itemId}/unpick-request`, {
       quantity,

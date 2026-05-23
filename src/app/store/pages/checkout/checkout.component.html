@@ -132,7 +132,7 @@
       <aside class="summary-panel">
         <h3>Resumen de pedido</h3>
         <div class="summary-list">
-          @for (item of cartService.items(); track item.variantId) {
+          @for (item of cartService.items(); track item.cartKey) {
             <div class="summary-item">
               <strong>{{ item.productName }}</strong>
               <p>{{ item.colorName }} / {{ item.sizeName }}</p>

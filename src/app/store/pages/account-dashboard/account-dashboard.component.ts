@@ -319,6 +319,15 @@ export class AccountDashboardComponent implements OnInit {
     }
   }
 
+  goToOrderDetail(orderCode: string) {
+    const normalizedCode = String(orderCode || '').trim().toUpperCase();
+    if (!normalizedCode) {
+      return;
+    }
+
+    this.router.navigate(['/marketplace/order-confirmation', normalizedCode]);
+  }
+
   closeOrderDetail() {
     this.selectedOrderCode.set(null);
     this.router.navigate([], {

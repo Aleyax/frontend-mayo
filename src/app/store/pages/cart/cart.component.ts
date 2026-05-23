@@ -60,12 +60,12 @@ export class CartComponent implements OnInit {
     this.loadCheckoutPaymentMethods();
   }
 
-  updateQty(variantId: number, value: number) {
-    this.cartService.updateQuantity(variantId, value);
+  updateQty(cartKey: string, value: number) {
+    this.cartService.updateQuantity(cartKey, value);
   }
 
-  removeVariant(variantId: number) {
-    this.cartService.removeVariant(variantId);
+  removeVariant(cartKey: string) {
+    this.cartService.removeVariant(cartKey);
   }
 
   clearAll() {

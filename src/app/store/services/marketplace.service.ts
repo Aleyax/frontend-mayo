@@ -46,6 +46,9 @@ export interface MarketplaceCheckoutPayload {
     variantId: number;
     quantity: number;
     unitPrice?: number;
+    colorName?: string;
+    sizeName?: string;
+    displayVariantId?: number;
   }>;
 }
 

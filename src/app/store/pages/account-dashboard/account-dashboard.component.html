@@ -96,7 +96,7 @@
       } @else {
         <div class="orders-list">
           @for (order of filteredOrders(); track order.code) {
-            <button type="button" class="order-row" (click)="openOrderDetail(order.code)">
+            <button type="button" class="order-row" (click)="goToOrderDetail(order.code)">
               <div class="main">
                 <strong>{{ order.code }}</strong>
                 <span>{{ order.publicStatus }}</span>

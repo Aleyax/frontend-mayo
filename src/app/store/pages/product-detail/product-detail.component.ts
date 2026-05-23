@@ -140,6 +140,12 @@ export class ProductDetailComponent implements OnInit {
       });
   });
 
+  readonly isSingleSelectionProduct = computed(() => {
+    const variants = this.product()?.variants || [];
+    if (!variants.length) return false;
+    return variants.every((variant) => Boolean(variant?.isSimpleVariant) || Boolean(variant?.isSizeOnlyVariant));
+  });
+
   readonly quantityByVariant = new Map<number, number>();
 
   readonly totalSelectedUnits = computed(() => {
@@ -220,6 +226,20 @@ export class ProductDetailComponent implements OnInit {
 
   setVariantQty(variantId: number, value: number) {
     const sanitized = Math.max(0, Math.floor(Number(value || 0)));
+    if (sanitized < 1) {
+      this.quantityByVariant.delete(variantId);
+      this.bumpQuantityVersion();
+      return;
+    }
+
+    if (this.isSingleSelectionProduct()) {
+      for (const variant of this.product()?.variants || []) {
+        if (Number(variant.id) !== Number(variantId)) {
+          this.quantityByVariant.delete(variant.id);
+        }
+      }
+    }
+
     this.quantityByVariant.set(variantId, sanitized);
     this.bumpQuantityVersion();
   }
@@ -268,9 +288,15 @@ export class ProductDetailComponent implements OnInit {
     const product = this.product();
     if (!product) return;
 
-    const selections = product.variants
+    let selections = product.variants
       .map((variant) => ({ variant, quantity: this.getVariantQty(variant.id) }))
       .filter((entry) => entry.quantity > 0);
+
+    if (this.isSingleSelectionProduct() && selections.length > 1) {
+      const selectedVariantId = Number(this.selectedVariant()?.id || 0);
+      const selectedEntry = selections.find((entry) => Number(entry.variant.id) === selectedVariantId);
+      selections = [selectedEntry || selections[0]];
+    }
 
     if (!selections.length) {
       this.addToCartMessage.set('Selecciona al menos una variante con cantidad mayor a 0.');

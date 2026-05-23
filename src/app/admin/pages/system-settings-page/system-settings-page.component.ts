@@ -27,6 +27,8 @@ export class SystemSettingsPageComponent implements OnInit {
   initialMarketplacePaymentMethodIds = signal<number[]>([]);
   marketplaceIncludeIgv = signal(true);
   initialMarketplaceIncludeIgv = signal(true);
+  marketplaceAutoReserveStock = signal(false);
+  initialMarketplaceAutoReserveStock = signal(false);
   paymentMethods = signal<PaymentMethod[]>([]);
 
   constructor(
@@ -45,6 +47,7 @@ export class SystemSettingsPageComponent implements OnInit {
       || this.pickingResponsibilityFlowEnabled() !== this.initialPickingResponsibilityFlowEnabled()
       || this.marketplacePaymentMethodsEnabled() !== this.initialMarketplacePaymentMethodsEnabled()
       || this.marketplaceIncludeIgv() !== this.initialMarketplaceIncludeIgv()
+      || this.marketplaceAutoReserveStock() !== this.initialMarketplaceAutoReserveStock()
       || !this.areNumberArraysEqual(
         this.marketplacePaymentMethodIds(),
         this.initialMarketplacePaymentMethodIds(),
@@ -65,6 +68,10 @@ export class SystemSettingsPageComponent implements OnInit {
 
   onToggleMarketplaceIgv(checked: boolean) {
     this.marketplaceIncludeIgv.set(checked);
+  }
+
+  onToggleMarketplaceAutoReserveStock(checked: boolean) {
+    this.marketplaceAutoReserveStock.set(checked);
   }
 
   isPaymentMethodSelected(paymentMethodId: number): boolean {
@@ -92,6 +99,7 @@ export class SystemSettingsPageComponent implements OnInit {
     this.marketplacePaymentMethodsEnabled.set(this.initialMarketplacePaymentMethodsEnabled());
     this.marketplacePaymentMethodIds.set([...this.initialMarketplacePaymentMethodIds()]);
     this.marketplaceIncludeIgv.set(this.initialMarketplaceIncludeIgv());
+    this.marketplaceAutoReserveStock.set(this.initialMarketplaceAutoReserveStock());
   }
 
   saveSettings() {
@@ -111,6 +119,7 @@ export class SystemSettingsPageComponent implements OnInit {
         marketplacePaymentMethodsEnabled: this.marketplacePaymentMethodsEnabled(),
         marketplacePaymentMethodIds: this.marketplacePaymentMethodIds(),
         marketplaceIncludeIgv: this.marketplaceIncludeIgv(),
+        marketplaceAutoReserveStock: this.marketplaceAutoReserveStock(),
       })
       .subscribe({
         next: (settings) => {
@@ -119,6 +128,7 @@ export class SystemSettingsPageComponent implements OnInit {
           const marketplaceEnabled = settings.marketplacePaymentMethodsEnabled === true;
           const paymentMethodIds = this.sanitizeAllowedPaymentMethodIds(settings.marketplacePaymentMethodIds);
           const marketplaceIncludeIgv = settings.marketplaceIncludeIgv !== false;
+          const marketplaceAutoReserveStock = settings.marketplaceAutoReserveStock === true;
           this.initialReturnResponsibilityManagementEnabled.set(enabled);
           this.returnResponsibilityManagementEnabled.set(enabled);
           this.initialPickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
@@ -129,6 +139,8 @@ export class SystemSettingsPageComponent implements OnInit {
           this.marketplacePaymentMethodIds.set([...paymentMethodIds]);
           this.initialMarketplaceIncludeIgv.set(marketplaceIncludeIgv);
           this.marketplaceIncludeIgv.set(marketplaceIncludeIgv);
+          this.initialMarketplaceAutoReserveStock.set(marketplaceAutoReserveStock);
+          this.marketplaceAutoReserveStock.set(marketplaceAutoReserveStock);
           this.saving.set(false);
           this.alertService.show('Configuracion guardada', 'success', 2500);
         },
@@ -149,6 +161,7 @@ export class SystemSettingsPageComponent implements OnInit {
         const marketplaceEnabled = settings.marketplacePaymentMethodsEnabled === true;
         const paymentMethodIds = this.sanitizeAllowedPaymentMethodIds(settings.marketplacePaymentMethodIds);
         const marketplaceIncludeIgv = settings.marketplaceIncludeIgv !== false;
+        const marketplaceAutoReserveStock = settings.marketplaceAutoReserveStock === true;
         this.initialReturnResponsibilityManagementEnabled.set(enabled);
         this.returnResponsibilityManagementEnabled.set(enabled);
         this.initialPickingResponsibilityFlowEnabled.set(pickingResponsibilityFlowEnabled);
@@ -159,6 +172,8 @@ export class SystemSettingsPageComponent implements OnInit {
         this.marketplacePaymentMethodIds.set([...paymentMethodIds]);
         this.initialMarketplaceIncludeIgv.set(marketplaceIncludeIgv);
         this.marketplaceIncludeIgv.set(marketplaceIncludeIgv);
+        this.initialMarketplaceAutoReserveStock.set(marketplaceAutoReserveStock);
+        this.marketplaceAutoReserveStock.set(marketplaceAutoReserveStock);
         this.loading.set(false);
       },
       error: (error) => {

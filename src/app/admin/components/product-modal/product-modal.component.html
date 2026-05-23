@@ -140,6 +140,100 @@
           </div>
         </div>
 
+        @if (isSimpleMode) {
+          <div class="card bg-base-200 p-4">
+            <label class="label cursor-pointer justify-start gap-3">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-primary"
+                [checked]="marketplaceVariantsEnabled()"
+                (change)="toggleMarketplaceVariants($event.target.checked)"
+              />
+              <div class="flex flex-col">
+                <span class="font-semibold">Variantes para marketplace</span>
+                <span class="text-xs text-gray-500">
+                  Usa un producto unico para picking, pero muestra combinaciones color/talla en marketplace.
+                </span>
+              </div>
+            </label>
+
+            @if (marketplaceVariantsEnabled()) {
+              <div class="marketplace-variants-panel mt-3">
+                <div class="grid gap-4 lg:grid-cols-2">
+                  <div class="card bg-base-100 border border-base-300 p-3">
+                    <h5 class="font-semibold mb-2">Colores marketplace</h5>
+                    <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                      @for (color of colors; track color.id) {
+                        <label class="label cursor-pointer justify-start gap-2 py-1">
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            [checked]="selectedColorIds().includes(color.id)"
+                            (change)="toggleColor(color.id, $event.target.checked)"
+                          />
+                          <span>{{ color.name }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="card bg-base-100 border border-base-300 p-3">
+                    <h5 class="font-semibold mb-2">Tallas marketplace</h5>
+                    <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                      @for (size of sizes; track size.id) {
+                        <label class="label cursor-pointer justify-start gap-2 py-1">
+                          <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            [checked]="selectedSizeIds().includes(size.id)"
+                            (change)="toggleSize(size.id, $event.target.checked)"
+                          />
+                          <span>{{ size.name }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                  <button class="btn btn-primary btn-sm" type="button" (click)="generateMarketplaceVariants()">
+                    Generar variantes marketplace
+                  </button>
+                  <span class="text-xs text-gray-500">
+                    Combinaciones: {{ marketplaceVariants().length }}
+                  </span>
+                </div>
+
+                @if (marketplaceVariants().length) {
+                  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 p-3 mt-3">
+                    <h5 class="font-semibold mb-2">Variantes para marketplace</h5>
+                    <table class="table table-sm w-full">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Color</th>
+                          <th>Talla</th>
+                          <th>Precio base</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (variant of marketplaceVariants(); track variant.colorId + '-' + variant.sizeId + '-' + $index) {
+                          <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ getColorName(variant.colorId) }}</td>
+                            <td>{{ getSizeName(variant.sizeId) }}</td>
+                            <td>S/ {{ variant.price | number:'1.2-2' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
         @if (!isSimpleMode) {
           <div class="grid gap-4" [ngClass]="{ 'lg:grid-cols-2': !isSizeOnlyMode }">
             @if (!isSizeOnlyMode) {

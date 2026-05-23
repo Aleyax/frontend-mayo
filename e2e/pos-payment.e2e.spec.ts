@@ -105,6 +105,17 @@ test('POS payment flow exits processing state and shows feedback toast', async (
   await productWithStock.click();
 
   await expect(page.getByRole('heading', { name: /Seleccionar variante/i })).toBeVisible();
+  const colorOptions = page.locator('.drawer-content .color-selector .color-btn');
+  if ((await colorOptions.count()) > 0) {
+    await colorOptions.first().click();
+  }
+  const sizeOptions = page.locator('.drawer-content .size-selector .size-btn');
+  if ((await sizeOptions.count()) > 0) {
+    await sizeOptions.first().click();
+  }
+  const variantQuantityInput = page.locator('#variantQuantity');
+  await variantQuantityInput.fill('1');
+
   const addToCartButton = page.getByRole('button', { name: /Agregar al carrito/i });
   await expect(addToCartButton).toBeEnabled();
   await addToCartButton.click();

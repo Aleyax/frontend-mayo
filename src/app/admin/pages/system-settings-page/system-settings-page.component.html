@@ -135,5 +135,27 @@
     </div>
   </section>
 
+  <section class="settings-card">
+    <div class="settings-card-head">
+      <div>
+        <h2>Reserva Automatica en Marketplace</h2>
+        <p>
+          Si esta activa, los pedidos del marketplace reservan stock al crearse segun disponibilidad.
+          Si esta desactivada, la reserva se gestiona manualmente en la validacion interna.
+        </p>
+      </div>
+      <label class="toggle-wrap">
+        <span>{{ marketplaceAutoReserveStock() ? 'Activa' : 'Desactivada' }}</span>
+        <input
+          type="checkbox"
+          class="toggle toggle-primary"
+          [checked]="marketplaceAutoReserveStock()"
+          [disabled]="loading() || saving()"
+          (change)="onToggleMarketplaceAutoReserveStock($event.target.checked)"
+        />
+      </label>
+    </div>
+  </section>
+
   <app-alert></app-alert>
 </div>

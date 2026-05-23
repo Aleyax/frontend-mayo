@@ -2,10 +2,14 @@ import { Injectable, computed, signal } from '@angular/core';
 import { MarketplaceCatalogProduct, MarketplaceProductVariant } from '../interfaces/marketplace.interface';
 
 export interface MarketplaceCartItem {
+  cartKey: string;
   productId: number;
   productName: string;
   productImageUrl?: string | null;
+  displayVariantId: number;
   variantId: number;
+  sourceVariantId?: number;
+  isVirtualMarketplaceVariant?: boolean;
   sku: string;
   colorName: string;
   sizeName: string;
@@ -18,7 +22,7 @@ export interface MarketplaceCartItem {
   providedIn: 'root',
 })
 export class MarketplaceCartService {
-  private readonly storageKey = 'marketplace_wholesale_cart_v1';
+  private readonly storageKey = 'marketplace_wholesale_cart_v2';
   private readonly paymentMethodStorageKey = 'marketplace_wholesale_checkout_payment_method_id_v1';
   readonly items = signal<MarketplaceCartItem[]>(this.loadInitialItems());
   readonly selectedPaymentMethodId = signal<number | null>(this.loadInitialPaymentMethodId());
@@ -48,7 +52,9 @@ export class MarketplaceCartService {
 
       selections.forEach(({ variant, quantity }) => {
         if (!quantity || quantity < 1) return;
-        const idx = next.findIndex((item) => Number(item.variantId) === Number(variant.id));
+        const cartKey = this.buildCartKey(variant);
+        const sourceVariantId = Number(variant.sourceVariantId || variant.id);
+        const idx = next.findIndex((item) => String(item.cartKey) === cartKey);
         if (idx >= 0) {
           const merged = { ...next[idx] };
           merged.quantity += quantity;
@@ -59,10 +65,14 @@ export class MarketplaceCartService {
         }
 
         next.push({
+          cartKey,
           productId: product.id,
           productName: product.name,
           productImageUrl: variant.imageUrl || product.imageUrl || null,
-          variantId: variant.id,
+          displayVariantId: Number(variant.id),
+          variantId: sourceVariantId,
+          sourceVariantId,
+          isVirtualMarketplaceVariant: variant.isVirtualMarketplaceVariant === true,
           sku: variant.sku || 'SIN-SKU',
           colorName: variant.color?.name || 'Unico',
           sizeName: variant.size?.name || 'Unica',
@@ -78,14 +88,14 @@ export class MarketplaceCartService {
     this.persist();
   }
 
-  updateQuantity(variantId: number, quantity: number) {
+  updateQuantity(cartKey: string, quantity: number) {
     this.items.update((current) => {
       const sanitized = Math.max(0, Math.floor(Number(quantity || 0)));
       if (sanitized === 0) {
-        return current.filter((item) => Number(item.variantId) !== Number(variantId));
+        return current.filter((item) => String(item.cartKey) !== String(cartKey));
       }
       return current.map((item) =>
-        Number(item.variantId) === Number(variantId)
+        String(item.cartKey) === String(cartKey)
           ? { ...item, quantity: sanitized }
           : item,
       );
@@ -93,8 +103,8 @@ export class MarketplaceCartService {
     this.persist();
   }
 
-  removeVariant(variantId: number) {
-    this.items.update((current) => current.filter((item) => Number(item.variantId) !== Number(variantId)));
+  removeVariant(cartKey: string) {
+    this.items.update((current) => current.filter((item) => String(item.cartKey) !== String(cartKey)));
     this.persist();
   }
 
@@ -126,6 +136,10 @@ export class MarketplaceCartService {
         .filter((item) => Number(item.variantId) > 0 && Number(item.quantity) > 0)
         .map((item) => ({
           ...item,
+          cartKey: String(item.cartKey || `legacy-${item.variantId}-${item.colorName || ''}-${item.sizeName || ''}`),
+          displayVariantId: Number(item.displayVariantId || item.variantId),
+          sourceVariantId: Number(item.sourceVariantId || item.variantId),
+          isVirtualMarketplaceVariant: item.isVirtualMarketplaceVariant === true,
           quantity: Math.max(1, Math.floor(Number(item.quantity || 1))),
           unitPrice: Number(item.unitPrice || 0),
           availableStock: Number(item.availableStock || 0),
@@ -133,6 +147,15 @@ export class MarketplaceCartService {
     } catch {
       return [];
     }
+  }
+
+  private buildCartKey(variant: MarketplaceProductVariant): string {
+    const variantId = Number(variant.id || 0);
+    const sourceVariantId = Number(variant.sourceVariantId || variant.id || 0);
+    if (variant.isVirtualMarketplaceVariant) {
+      return `virtual-${sourceVariantId}-${variantId}`;
+    }
+    return `variant-${variantId}`;
   }
 
   private loadInitialPaymentMethodId(): number | null {

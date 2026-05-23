@@ -4,7 +4,7 @@
   --mkx-surface-soft: color-mix(in oklab, var(--mkx-surface) 84%, var(--mkx-text) 16%);
   --mkx-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
   --mkx-text: var(--color-base-content, #0f172a);
-  --mkx-primary: #ff6a00;
+  --mkx-primary: var(--color-primary, #0b63ce);
   --mkx-accent: var(--color-info, #0b63ce);
 }
 

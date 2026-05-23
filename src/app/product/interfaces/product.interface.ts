@@ -24,6 +24,8 @@ export interface Product {
   variantCount?: number;
   imageCount?: number;
   variantMode?: ProductVariantMode;
+  marketplaceVariantColorIds?: number[];
+  marketplaceVariantSizeIds?: number[];
   variants?: ProductVariant[];
   images?: Array<{ id: number; url: string }>;
 }

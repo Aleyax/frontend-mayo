@@ -3,7 +3,7 @@
   --mkd-surface: var(--color-base-100, #ffffff);
   --mkd-muted: color-mix(in oklab, var(--color-base-content, #0f172a) 58%, transparent);
   --mkd-text: var(--color-base-content, #0f172a);
-  --mkd-primary: #e25600;
+  --mkd-primary: var(--color-primary, #0b63ce);
   --mkd-accent: var(--color-info, #0b63ce);
   --mkd-bg: var(--color-base-200, #f4f7fb);
   --mkd-surface-soft: color-mix(in oklab, var(--mkd-surface) 84%, var(--mkd-text) 16%);
@@ -29,9 +29,14 @@
 }
 
 .mk-detail-head {
-  border: 1px solid var(--mkd-border);
-  border-radius: 12px;
-  background: var(--mkd-surface);
+  border: 0;
+  border-radius: 14px;
+  background: radial-gradient(
+    circle at top right,
+    color-mix(in oklab, var(--mkd-primary) 16%, var(--mkd-surface)) 0%,
+    color-mix(in oklab, var(--mkd-accent) 8%, var(--mkd-surface)) 36%,
+    var(--mkd-surface) 52%
+  );
   padding: 0.95rem 1rem;
   display: flex;
   align-items: flex-start;
@@ -86,12 +91,11 @@
   gap: 1rem;
 }
 
-.gallery-panel,
-.offer-panel {
-  border: 1px solid var(--mkd-border);
-  border-radius: 12px;
-  background: var(--mkd-surface);
-  padding: 0.9rem;
+.gallery-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .gallery-stage {
@@ -103,9 +107,9 @@
 
 .main-image {
   height: clamp(420px, 72vh, 840px);
-  border: 1px solid var(--mkd-border);
-  border-radius: 10px;
-  background: var(--mkd-surface-soft);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -152,6 +156,11 @@
 }
 
 .offer-panel {
+  border: 1px solid var(--mkd-border);
+  border-radius: 12px;
+  background: var(--mkd-surface);
+  padding: 0.95rem;
+  margin-top: 0.6rem;
   position: sticky;
   top: 0.9rem;
   align-self: start;

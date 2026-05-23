@@ -9,6 +9,7 @@ export type OrderWorkflowSettings = {
   marketplacePaymentMethodsEnabled: boolean;
   marketplacePaymentMethodIds: number[];
   marketplaceIncludeIgv: boolean;
+  marketplaceAutoReserveStock: boolean;
 };
 
 const baseUrl = `${environment.apiUrl}/system-config`;
@@ -34,6 +35,8 @@ export class SystemConfigService {
             : [],
         marketplaceIncludeIgv:
           response?.data?.marketplaceIncludeIgv !== false,
+        marketplaceAutoReserveStock:
+          response?.data?.marketplaceAutoReserveStock === true,
       })),
       catchError((error) => throwError(() => error)),
     );
@@ -45,6 +48,7 @@ export class SystemConfigService {
     marketplacePaymentMethodsEnabled: boolean;
     marketplacePaymentMethodIds: number[];
     marketplaceIncludeIgv: boolean;
+    marketplaceAutoReserveStock: boolean;
   }): Observable<OrderWorkflowSettings> {
     return this.http.patch<{ data: OrderWorkflowSettings }>(`${baseUrl}/order-workflow`, {
       returnResponsibilityManagementEnabled: payload.returnResponsibilityManagementEnabled,
@@ -52,6 +56,7 @@ export class SystemConfigService {
       marketplacePaymentMethodsEnabled: payload.marketplacePaymentMethodsEnabled,
       marketplacePaymentMethodIds: payload.marketplacePaymentMethodIds,
       marketplaceIncludeIgv: payload.marketplaceIncludeIgv,
+      marketplaceAutoReserveStock: payload.marketplaceAutoReserveStock,
     }).pipe(
       map((response) => ({
         returnResponsibilityManagementEnabled:
@@ -66,6 +71,8 @@ export class SystemConfigService {
             : [],
         marketplaceIncludeIgv:
           response?.data?.marketplaceIncludeIgv !== false,
+        marketplaceAutoReserveStock:
+          response?.data?.marketplaceAutoReserveStock === true,
       })),
       catchError((error) => throwError(() => error)),
     );

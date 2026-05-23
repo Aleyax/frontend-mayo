@@ -48,6 +48,13 @@
             }
           </div>
         </div>
+
+        @if (current.description) {
+          <section class="product-description-card">
+            <h3 class="font-bold text-lg">Descripcion del producto</h3>
+            <div class="product-description-body" [innerHTML]="current.description"></div>
+          </section>
+        }
       </aside>
 
       <section class="offer-panel">
@@ -118,13 +125,6 @@
         </footer>
       </section>
     </div>
-
-    @if (current.description) {
-      <section class="product-description-card">
-        <h3 class="font-bold text-lg">Descripcion del producto</h3>
-        <div class="product-description-body" [innerHTML]="current.description"></div>
-      </section>
-    }
 
     @if (drawerOpen()) {
       <button type="button" class="drawer-backdrop" (click)="closeVariantDrawer()"></button>
