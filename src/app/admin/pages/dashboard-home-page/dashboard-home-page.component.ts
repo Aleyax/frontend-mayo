@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Inventory, StockTransfer } from '../../../inventory/interfaces/inventory.interface';
 import { InventoryService } from '../../../inventory/services/inventory.service';
@@ -9,6 +10,7 @@ import { StoreService } from '../../../store/services/store.service';
 import { AlertService } from '../../../shared/services/alert.service';
 
 type SalesChannel = 'POS' | 'ECOMMERCE' | 'INTERNAL';
+type StockScope = 'critical-total' | 'out' | 'critical' | 'low' | 'normal';
 
 interface DashboardOrder {
   id: number;
@@ -140,6 +142,7 @@ interface DashboardMetrics {
   imports: [CommonModule]
 })
 export class DashboardHomePageComponent implements OnInit {
+  private readonly router = inject(Router);
   private readonly orderService = inject(OrderService);
   private readonly inventoryService = inject(InventoryService);
   private readonly storeService = inject(StoreService);
@@ -342,6 +345,50 @@ export class DashboardHomePageComponent implements OnInit {
     }
     const width = (value / max) * 100;
     return Math.max(5, Math.min(100, width));
+  }
+
+  goToCriticalProducts(): void {
+    this.goToInventoryStockScope('critical-total');
+  }
+
+  goToInventoryStockScope(scope: StockScope): void {
+    void this.router.navigate(['/admin/inventory'], {
+      queryParams: {
+        stockScope: scope,
+        showAdvanced: '1',
+      },
+    });
+  }
+
+  goToOrdersByStatus(status: 'PENDING' | 'READY'): void {
+    void this.router.navigate(['/admin/orders/list'], {
+      queryParams: {
+        status,
+      },
+    });
+  }
+
+  goToPaidWithoutPicking(): void {
+    void this.router.navigate(['/admin/orders/picking'], {
+      queryParams: {
+        status: 'CONFIRMED',
+      },
+    });
+  }
+
+  goToPickingBoard(status: '' | 'PREPARING' | 'READY' | 'CONFIRMED' = ''): void {
+    const queryParams = status ? { status } : undefined;
+    void this.router.navigate(['/admin/orders/picking'], queryParams ? { queryParams } : undefined);
+  }
+
+  goToOverdueOrders(): void {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    void this.router.navigate(['/admin/orders/list'], {
+      queryParams: {
+        status: 'PENDING',
+        endDate: cutoff.toISOString(),
+      },
+    });
   }
 
   private getVsYesterdayLabel(value: number | null): string {

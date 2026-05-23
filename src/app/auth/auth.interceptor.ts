@@ -1,6 +1,6 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 
@@ -19,6 +19,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     : req;
 
   return next(authReq).pipe(
+    tap((event) => {
+      if (!(event instanceof HttpResponse)) {
+        return;
+      }
+      if (!isAdminApiRequest || shouldSkipTokenHandling) {
+        return;
+      }
+      const refreshedToken = event.headers.get('x-access-token');
+      if (refreshedToken) {
+        authService.updateToken(refreshedToken);
+      }
+    }),
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && isAdminApiRequest && !shouldSkipTokenHandling) {
         authService.logout();

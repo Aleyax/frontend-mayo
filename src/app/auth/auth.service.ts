@@ -74,6 +74,14 @@ export class AuthService {
     this.currentUserState.set(user);
   }
 
+  updateToken(token: string): void {
+    if (!token || this.isTokenExpired(token)) {
+      return;
+    }
+    localStorage.setItem(AuthService.TOKEN_KEY, token);
+    this.tokenState.set(token);
+  }
+
   getToken(): string | null {
     const token = this.tokenState() ?? localStorage.getItem(AuthService.TOKEN_KEY);
     if (!token) {

@@ -1,6 +1,6 @@
 ﻿import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { InventoryService } from '../../../inventory/services/inventory.service';
 import { Inventory, InventoryReservation } from '../../../inventory/interfaces/inventory.interface';
 import { Subject } from 'rxjs';
@@ -20,6 +20,8 @@ interface InventoryVariantOption {
   label: string;
 }
 
+type InventoryStockScope = 'ALL' | 'OUT' | 'CRITICAL' | 'LOW' | 'NORMAL';
+
 @Component({
   selector: 'app-inventory-admin-page',
   templateUrl: './inventory-admin-page.component.html',
@@ -32,6 +34,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
   private storeService = inject(StoreService);
   private productService = inject(ProductService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   inventoryData = signal<Inventory[]>([]);
   productCatalog = signal<Product[]>([]);
@@ -58,6 +61,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
   includeZero = signal<boolean>(true);
   reservedOnly = signal<boolean>(false);
   lowStockThreshold = signal<number>(0);
+  stockScope = signal<InventoryStockScope>('ALL');
   reconcilingReserved = signal<boolean>(false);
 
   productOptions = computed(() => {
@@ -161,6 +165,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     const selectedColorId = this.selectedColorId();
     const reservedOnly = this.reservedOnly();
     const lowStockThreshold = this.lowStockThreshold();
+    const stockScope = this.stockScope();
 
     return this.inventoryData().filter((item) => {
       const skuValue = item.variant.sku.toLowerCase();
@@ -186,6 +191,7 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
       const matchesReservedOnly = !reservedOnly || item.reservedStock > 0;
       const matchesZero = this.includeZero() || item.stock > 0;
       const matchesLowStock = lowStockThreshold <= 0 || availableStock <= lowStockThreshold;
+      const matchesStockScope = this.matchesStockScopeFilter(availableStock, stockScope);
 
       return (
         matchesSearch &&
@@ -196,12 +202,134 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
         matchesColor &&
         matchesReservedOnly &&
         matchesZero &&
-        matchesLowStock
+        matchesLowStock &&
+        matchesStockScope
       );
     });
   }
 
+  private matchesStockScopeFilter(availableStock: number, scope: InventoryStockScope): boolean {
+    if (scope === 'OUT') {
+      return availableStock <= 0;
+    }
+    if (scope === 'CRITICAL') {
+      return availableStock >= 1 && availableStock <= 3;
+    }
+    if (scope === 'LOW') {
+      return availableStock >= 4 && availableStock <= 10;
+    }
+    if (scope === 'NORMAL') {
+      return availableStock > 10;
+    }
+    return true;
+  }
+
+  private applyFiltersFromQueryParams(queryParams: ParamMap): boolean {
+    const previousIncludeZero = this.includeZero();
+
+    const search = String(queryParams.get('search') || '').trim();
+    const sku = String(queryParams.get('sku') || '').trim();
+    const stockScopeQuery = this.normalizeStockScopeFromQuery(queryParams.get('stockScope'));
+    const includeZeroQuery = this.normalizeBooleanFromQuery(queryParams.get('includeZero'));
+    const reservedOnlyQuery = this.normalizeBooleanFromQuery(queryParams.get('reservedOnly'));
+    const lowStockThresholdQuery = this.normalizeNumberFromQuery(queryParams.get('lowStockThreshold'));
+    const showAdvancedQuery = this.normalizeBooleanFromQuery(queryParams.get('showAdvanced'));
+
+    this.searchParam.set(search);
+    this.skuFilter.set(sku);
+    this.selectedStoreId.set(this.normalizeIdFromQuery(queryParams.get('storeId')));
+    this.selectedProductId.set(this.normalizeIdFromQuery(queryParams.get('productId')));
+    this.selectedSizeId.set(this.normalizeIdFromQuery(queryParams.get('sizeId')));
+    this.selectedColorId.set(this.normalizeIdFromQuery(queryParams.get('colorId')));
+    this.reservedOnly.set(reservedOnlyQuery ?? false);
+    this.stockScope.set('ALL');
+    this.includeZero.set(includeZeroQuery ?? true);
+    this.lowStockThreshold.set(lowStockThresholdQuery ?? 0);
+
+    if (stockScopeQuery === 'critical-total') {
+      this.stockScope.set('ALL');
+      this.includeZero.set(true);
+      this.lowStockThreshold.set(3);
+    } else if (stockScopeQuery === 'out') {
+      this.stockScope.set('OUT');
+      this.lowStockThreshold.set(0);
+      this.includeZero.set(true);
+    } else if (stockScopeQuery === 'critical') {
+      this.stockScope.set('CRITICAL');
+      this.lowStockThreshold.set(0);
+      this.includeZero.set(true);
+    } else if (stockScopeQuery === 'low') {
+      this.stockScope.set('LOW');
+      this.lowStockThreshold.set(0);
+      this.includeZero.set(true);
+    } else if (stockScopeQuery === 'normal') {
+      this.stockScope.set('NORMAL');
+      this.lowStockThreshold.set(0);
+      this.includeZero.set(true);
+    }
+
+    if (showAdvancedQuery !== null) {
+      this.showAdvancedFilters.set(showAdvancedQuery);
+    } else {
+      this.showAdvancedFilters.set(stockScopeQuery !== null);
+    }
+
+    return previousIncludeZero !== this.includeZero();
+  }
+
+  private normalizeIdFromQuery(value: string | null): number | null {
+    const parsed = Number(value || 0);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  }
+
+  private normalizeBooleanFromQuery(value: string | null): boolean | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    if (normalized === '1' || normalized === 'true' || normalized === 'yes') {
+      return true;
+    }
+    if (normalized === '0' || normalized === 'false' || normalized === 'no') {
+      return false;
+    }
+    return null;
+  }
+
+  private normalizeNumberFromQuery(value: string | null): number | null {
+    const parsed = Number(value || '');
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return null;
+    }
+    return parsed;
+  }
+
+  private normalizeStockScopeFromQuery(value: string | null): 'critical-total' | 'out' | 'critical' | 'low' | 'normal' | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (
+      normalized === 'critical-total' ||
+      normalized === 'out' ||
+      normalized === 'critical' ||
+      normalized === 'low' ||
+      normalized === 'normal'
+    ) {
+      return normalized;
+    }
+    return null;
+  }
+
   ngOnInit() {
+    let firstQuerySync = true;
+    this.route.queryParamMap.subscribe((queryParams) => {
+      const includeZeroChanged = this.applyFiltersFromQueryParams(queryParams);
+      if (!firstQuerySync && includeZeroChanged) {
+        this.loadInventories();
+      }
+      firstQuerySync = false;
+    });
     this.loadInventories();
     this.loadStoreOptions();
     this.loadProductCatalog();
@@ -469,7 +597,9 @@ export class InventoryAdminPageComponent implements OnInit, OnDestroy {
     this.selectedColorId.set(null);
     this.reservedOnly.set(false);
     this.lowStockThreshold.set(0);
+    this.stockScope.set('ALL');
     this.includeZero.set(true);
+    this.showAdvancedFilters.set(false);
     this.searchSubject.next('');
   }
 

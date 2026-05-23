@@ -10,6 +10,9 @@ function buildComponent() {
   const router = {
     navigate: vi.fn()
   };
+  const route = {
+    queryParamMap: of({ get: () => null })
+  };
   const orderService = {
     listOrders: vi.fn(() => of({ data: [], pagination: { total: 0, totalPages: 1 } })),
     updateOrderStatus: vi.fn(() => of({}))
@@ -17,13 +20,18 @@ function buildComponent() {
   const storeService = {
     getStores: vi.fn(() => of([]))
   };
+  const alertService = {
+    show: vi.fn()
+  };
   const injector = createEnvironmentInjector([provideZoneChangeDetection()], Injector.NULL as unknown as EnvironmentInjector);
 
   const component = runInInjectionContext(injector, () => new OrdersListComponent(
     new FormBuilder(),
+    route as any,
     router as any,
     orderService as any,
-    storeService as any
+    storeService as any,
+    alertService as any
   ));
 
   component.initializeForm();

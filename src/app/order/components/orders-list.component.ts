@@ -1,7 +1,7 @@
 import { Component, computed, HostListener, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { OrderService, OrderStatus } from '../services/order.service';
 import { StoreService } from '../../store/services/store.service';
@@ -196,6 +196,7 @@ export class OrdersListComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private router: Router,
     private orderService: OrderService,
     private storeService: StoreService,
@@ -204,6 +205,9 @@ export class OrdersListComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
+    this.route.queryParamMap.subscribe((queryParams) => {
+      this.applyFiltersFromQueryParams(queryParams);
+    });
   }
 
   @HostListener('document:keydown.escape')
@@ -220,6 +224,76 @@ export class OrdersListComponent implements OnInit {
       startDate: [''],
       endDate: ['']
     });
+  }
+
+  private applyFiltersFromQueryParams(queryParams: ParamMap) {
+    if (!this.filterForm) {
+      return;
+    }
+
+    const status = this.normalizeStatusFromQuery(queryParams.get('status'));
+    const channel = this.normalizeChannel(queryParams.get('channel')) ?? '';
+    const storeId = this.normalizeStoreIdFromQuery(queryParams.get('storeId'));
+    const startDate = this.normalizeDateFromQuery(queryParams.get('startDate'));
+    const endDate = this.normalizeDateFromQuery(queryParams.get('endDate'));
+    const search = this.normalizeSearch(queryParams.get('search')) ?? '';
+    const page = this.normalizePageFromQuery(queryParams.get('page'));
+
+    this.filterForm.patchValue({
+      search,
+      channel,
+      status,
+      storeId,
+      startDate,
+      endDate,
+    }, { emitEvent: false });
+
+    this.currentPage.set(page);
+    this.loadOrders();
+  }
+
+  private normalizeStatusFromQuery(status: string | null): string {
+    const normalized = String(status || '').trim().toUpperCase();
+    const allowedStatuses = new Set(this.statusOptions.map((option) => option.value.toUpperCase()));
+    if (!normalized || !allowedStatuses.has(normalized)) {
+      return '';
+    }
+    return normalized;
+  }
+
+  private normalizeStoreIdFromQuery(value: string | null): string {
+    const parsed = Number(value || 0);
+    return Number.isInteger(parsed) && parsed > 0 ? String(parsed) : '';
+  }
+
+  private normalizeDateFromQuery(value: string | null): string {
+    const raw = String(value || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    const firstTokenMatch = /^(\d{4}-\d{2}-\d{2})/.exec(raw);
+    if (firstTokenMatch) {
+      return firstTokenMatch[1];
+    }
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private normalizePageFromQuery(value: string | null): number {
+    const parsed = Number(value || 1);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return 1;
+    }
+    return Math.floor(parsed);
   }
 
   loadOrders() {

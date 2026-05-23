@@ -82,6 +82,31 @@ h3 {
   padding: 0.9rem;
 }
 
+.clickable-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.clickable-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--dash-primary) 45%, var(--dash-border));
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--dash-primary) 20%, transparent);
+}
+
+.clickable-card:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--dash-primary) 60%, white);
+  outline-offset: 2px;
+}
+
+.kpi-action {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--dash-primary) 72%, var(--dash-text));
+}
+
 .kpi-label {
   margin: 0;
   font-size: 0.78rem;
@@ -116,6 +141,21 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+  align-items: start;
+}
+
+.masonry-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.masonry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
 }
 
 .panel {
@@ -298,6 +338,9 @@ h3 {
   padding: 0.65rem;
   border: 1px solid var(--dash-border);
   background: var(--dash-soft);
+  appearance: none;
+  font: inherit;
+  color: inherit;
 }
 
 .stock-card p {
@@ -337,6 +380,9 @@ h3 {
   border-radius: 0.65rem;
   background: var(--dash-soft);
   padding: 0.65rem;
+  appearance: none;
+  font: inherit;
+  color: inherit;
 }
 
 .ops-card p {
@@ -367,8 +413,13 @@ h3 {
 
 @media (max-width: 980px) {
   .grid-two,
-  .subgrid {
+  .subgrid,
+  .masonry-two {
     grid-template-columns: 1fr;
+  }
+
+  .masonry-col {
+    gap: 0.8rem;
   }
 
   .header-actions {

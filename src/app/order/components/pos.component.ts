@@ -163,6 +163,7 @@ export class PosComponent implements OnInit {
       clientName: [''],
       clientEmail: ['', [Validators.email]],
       clientPhone: [''],
+      clientAddress: [''],
       note: ['']
     });
 
@@ -1300,17 +1301,26 @@ export class PosComponent implements OnInit {
 
   private buildOrderNote(paymentRef: string): string {
     const note = this.orderForm.get('note')?.value;
+    const clientAddress = String(this.orderForm.get('clientAddress')?.value || '').trim();
     const paymentNote = `Metodo de pago: ${this.selectedPaymentMethod}`;
     const igvNote = `IGV: ${this.applyIgv ? 'INCLUIDO' : 'NO_INCLUIDO'}`;
     const referenceNote = `Ref: ${paymentRef}`;
+    const clientAddressNote = clientAddress ? `Direccion cliente: ${clientAddress}` : null;
     const remoteStoreName = this.getStoreNameById(this.remoteFulfillmentStoreId);
     const remoteFulfillmentNote =
       this.remoteFulfillmentStoreId && this.remoteFulfillmentStoreId !== Number(this.selectedStoreId)
         ? `Fulfillment remoto: ${remoteStoreName || `Tienda #${this.remoteFulfillmentStoreId}`}`
         : null;
-    const baseNote = note ? `${note} | ${paymentNote} | ${igvNote}` : `${paymentNote} | ${igvNote}`;
-    const baseWithFulfillment = remoteFulfillmentNote ? `${baseNote} | ${remoteFulfillmentNote}` : baseNote;
-    return `${baseWithFulfillment} | ${referenceNote}`;
+    const noteParts = [
+      String(note || '').trim(),
+      paymentNote,
+      igvNote,
+      remoteFulfillmentNote || '',
+      clientAddressNote || '',
+      referenceNote,
+    ].filter((part) => part.length > 0);
+
+    return noteParts.join(' | ');
   }
 
   private createPaymentReference(): string {

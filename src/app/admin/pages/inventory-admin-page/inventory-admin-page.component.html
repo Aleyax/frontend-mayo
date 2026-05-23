@@ -41,6 +41,7 @@
                 type="text"
                 class="input join-item w-full"
                 placeholder="SKU, producto, tienda, color o talla"
+                [value]="searchParam()"
                 (input)="onSearch($any($event.target).value)"
               />
               <button class="btn join-item btn-primary" type="button" (click)="refresh()">Buscar</button>

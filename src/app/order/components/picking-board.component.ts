@@ -1,6 +1,7 @@
 ﻿import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { catchError, map, of } from 'rxjs';
 import {
@@ -117,6 +118,7 @@ export class PickingBoardComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private orderService: OrderService,
     private alertService: AlertService,
     private authService: AuthService,
@@ -163,6 +165,9 @@ export class PickingBoardComponent implements OnInit {
   ngOnInit() {
     this.initializeForm();
     this.syncViewportMode();
+    this.route.queryParamMap.subscribe((queryParams) => {
+      this.applyStatusFromQueryParams(queryParams);
+    });
   }
 
   @HostListener('window:resize')
@@ -212,6 +217,26 @@ export class PickingBoardComponent implements OnInit {
     this.filterForm = this.fb.group({
       status: ['']
     });
+  }
+
+  private applyStatusFromQueryParams(queryParams: ParamMap) {
+    if (!this.filterForm) {
+      return;
+    }
+
+    const status = this.normalizeStatusFromQuery(queryParams.get('status'));
+    this.filterForm.patchValue({ status }, { emitEvent: false });
+    this.statusFilter.set(status);
+    this.clearSelection();
+  }
+
+  private normalizeStatusFromQuery(value: string | null): string {
+    const normalized = String(value || '').trim().toUpperCase();
+    const allowed = new Set(this.pickingStatusShortcuts.map((shortcut) => shortcut.value));
+    if (!normalized || !allowed.has(normalized as any)) {
+      return '';
+    }
+    return normalized;
   }
 
   selectOrder(order: any) {

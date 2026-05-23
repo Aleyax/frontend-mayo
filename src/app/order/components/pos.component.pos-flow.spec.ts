@@ -104,6 +104,17 @@ describe('PosComponent payment flow diagnostics', () => {
     expect(component.toast?.message).toContain('Venta creada');
   });
 
+  it('includes client address in POS note when provided', () => {
+    const { component, orderService } = buildComponent();
+    component.orderForm.patchValue({ clientAddress: 'Av. Siempre Viva 742' });
+
+    component.submitPayment();
+
+    expect(orderService.createOrder).toHaveBeenCalledTimes(1);
+    const submittedOrder = orderService.createOrder.mock.calls[0]?.[0];
+    expect(String(submittedOrder?.note || '')).toContain('Direccion cliente: Av. Siempre Viva 742');
+  });
+
   it('does not stay stuck in loading when request hangs and recovery fails', async () => {
     const { component } = buildComponent({
       createOrder$: NEVER,
