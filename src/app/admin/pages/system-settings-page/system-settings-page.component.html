@@ -7,6 +7,28 @@
     </p>
   </div>
 
+  <div class="settings-actions">
+    <button type="button" class="btn btn-outline" (click)="reload()" [disabled]="saving()">
+      Recargar
+    </button>
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="resetChanges()"
+      [disabled]="loading() || saving() || !hasChanges"
+    >
+      Deshacer
+    </button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="saveSettings()"
+      [disabled]="loading() || saving() || !hasChanges"
+    >
+      {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+    </button>
+  </div>
+
   <section class="settings-card">
     <div class="settings-card-head">
       <div>
@@ -26,28 +48,6 @@
           (change)="onToggleReturnResponsibility($event.target.checked)"
         />
       </label>
-    </div>
-
-    <div class="settings-actions">
-      <button type="button" class="btn btn-outline" (click)="reload()" [disabled]="saving()">
-        Recargar
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline"
-        (click)="resetChanges()"
-        [disabled]="loading() || saving() || !hasChanges"
-      >
-        Deshacer
-      </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="saveSettings()"
-        [disabled]="loading() || saving() || !hasChanges"
-      >
-        {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
-      </button>
     </div>
   </section>
 

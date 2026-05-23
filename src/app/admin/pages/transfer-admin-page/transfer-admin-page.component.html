@@ -28,6 +28,7 @@
         <span class="label-text">Estado</span>
         <select class="select w-full" [value]="statusFilter()" (change)="setStatusFilter($any($event.target).value)">
           <option value="ALL">Todos</option>
+          <option value="TO_RECEIVE">Pendientes de recepcion</option>
           <option value="PENDING">Pendiente</option>
           <option value="IN_TRANSIT">En transito</option>
           <option value="RECEIVED">Recibida</option>

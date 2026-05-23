@@ -80,10 +80,15 @@
       </div>
       <div class="alerts-list">
         @for (alert of metrics().alerts; track alert.label) {
-          <div class="alert-item" [class.has-value]="alert.value > 0">
+          <button
+            type="button"
+            class="alert-item clickable-card"
+            [class.has-value]="alert.value > 0"
+            (click)="goToOperationalAlert(alert)"
+          >
             <span>{{ alert.value }}</span>
             <p>{{ alert.label }}</p>
-          </div>
+          </button>
         }
       </div>
     </article>
@@ -111,6 +116,74 @@
         }
       </div>
     }
+  </section>
+
+  <section class="grid-two">
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Stock critico por nivel</h2>
+      </div>
+      <div class="stock-grid">
+        <button type="button" class="stock-card out clickable-card" (click)="goToInventoryStockScope('out')">
+          <p>Sin stock</p>
+          <strong>{{ metrics().stockSummary.outOfStock }}</strong>
+        </button>
+        <button type="button" class="stock-card critical clickable-card" (click)="goToInventoryStockScope('critical')">
+          <p>Critico (1-3)</p>
+          <strong>{{ metrics().stockSummary.critical }}</strong>
+        </button>
+        <button type="button" class="stock-card low clickable-card" (click)="goToInventoryStockScope('low')">
+          <p>Bajo (4-10)</p>
+          <strong>{{ metrics().stockSummary.low }}</strong>
+        </button>
+        <button type="button" class="stock-card normal clickable-card" (click)="goToInventoryStockScope('normal')">
+          <p>Normal (&gt;10)</p>
+          <strong>{{ metrics().stockSummary.normal }}</strong>
+        </button>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <h2>Ordenes y picking pendientes</h2>
+      </div>
+      <div class="ops-grid">
+        <button type="button" class="ops-card clickable-card" (click)="goToOrdersByStatus('PENDING')">
+          <p>Ordenes PENDING</p>
+          <strong>{{ metrics().pendingOrders.pending }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToPaidWithoutPicking()">
+          <p>Pagadas sin picking</p>
+          <strong>{{ metrics().pendingOrders.paidWithoutPicking }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard('PREPARING')">
+          <p>Picking en progreso</p>
+          <strong>{{ metrics().pendingOrders.pickingInProgress }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToOrdersByStatus('READY')">
+          <p>Listas por entregar</p>
+          <strong>{{ metrics().pendingOrders.readyToDeliver }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToOverdueOrders()">
+          <p>Ordenes atrasadas (&gt;24h)</p>
+          <strong>{{ metrics().pendingOrders.overdue }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard('READY')">
+          <p>Picking completado hoy</p>
+          <strong>{{ metrics().picking.completedToday }}</strong>
+        </button>
+        <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard()">
+          <p>Tiempo prom. preparacion</p>
+          <strong>
+            @if (metrics().picking.avgPreparationMinutes !== null) {
+              {{ metrics().picking.avgPreparationMinutes | number:'1.0-0' }} min
+            } @else {
+              --
+            }
+          </strong>
+        </button>
+      </div>
+    </article>
   </section>
 
   <section class="masonry-two">
@@ -178,44 +251,6 @@
               </table>
             </div>
           </div>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Productos que deben reponerse</h2>
-        </div>
-        <div class="table-wrap">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Variante</th>
-                <th>Tienda</th>
-                <th>Disponible</th>
-                <th>Reservado</th>
-                <th>Recomendacion</th>
-              </tr>
-            </thead>
-            <tbody>
-              @if (metrics().replenishList.length === 0) {
-                <tr>
-                  <td colspan="6" class="empty-cell">Sin productos para reponer por ahora.</td>
-                </tr>
-              } @else {
-                @for (row of metrics().replenishList; track row.product + row.store + row.variant) {
-                  <tr>
-                    <td>{{ row.product }}</td>
-                    <td>{{ row.variant }}</td>
-                    <td>{{ row.store }}</td>
-                    <td>{{ row.available }}</td>
-                    <td>{{ row.reserved }}</td>
-                    <td>{{ row.recommendation }}</td>
-                  </tr>
-                }
-              }
-            </tbody>
-          </table>
         </div>
       </article>
 
@@ -318,72 +353,6 @@
               </table>
             </div>
           </div>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Stock critico por nivel</h2>
-        </div>
-        <div class="stock-grid">
-          <button type="button" class="stock-card out clickable-card" (click)="goToInventoryStockScope('out')">
-            <p>Sin stock</p>
-            <strong>{{ metrics().stockSummary.outOfStock }}</strong>
-          </button>
-          <button type="button" class="stock-card critical clickable-card" (click)="goToInventoryStockScope('critical')">
-            <p>Critico (1-3)</p>
-            <strong>{{ metrics().stockSummary.critical }}</strong>
-          </button>
-          <button type="button" class="stock-card low clickable-card" (click)="goToInventoryStockScope('low')">
-            <p>Bajo (4-10)</p>
-            <strong>{{ metrics().stockSummary.low }}</strong>
-          </button>
-          <button type="button" class="stock-card normal clickable-card" (click)="goToInventoryStockScope('normal')">
-            <p>Normal (&gt;10)</p>
-            <strong>{{ metrics().stockSummary.normal }}</strong>
-          </button>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Ordenes y picking pendientes</h2>
-        </div>
-        <div class="ops-grid">
-          <button type="button" class="ops-card clickable-card" (click)="goToOrdersByStatus('PENDING')">
-            <p>Ordenes PENDING</p>
-            <strong>{{ metrics().pendingOrders.pending }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToPaidWithoutPicking()">
-            <p>Pagadas sin picking</p>
-            <strong>{{ metrics().pendingOrders.paidWithoutPicking }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard('PREPARING')">
-            <p>Picking en progreso</p>
-            <strong>{{ metrics().pendingOrders.pickingInProgress }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToOrdersByStatus('READY')">
-            <p>Listas por entregar</p>
-            <strong>{{ metrics().pendingOrders.readyToDeliver }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToOverdueOrders()">
-            <p>Ordenes atrasadas (&gt;24h)</p>
-            <strong>{{ metrics().pendingOrders.overdue }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard('READY')">
-            <p>Picking completado hoy</p>
-            <strong>{{ metrics().picking.completedToday }}</strong>
-          </button>
-          <button type="button" class="ops-card clickable-card" (click)="goToPickingBoard()">
-            <p>Tiempo prom. preparacion</p>
-            <strong>
-              @if (metrics().picking.avgPreparationMinutes !== null) {
-                {{ metrics().picking.avgPreparationMinutes | number:'1.0-0' }} min
-              } @else {
-                --
-              }
-            </strong>
-          </button>
         </div>
       </article>
     </div>

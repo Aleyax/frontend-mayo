@@ -178,15 +178,15 @@ export class RoleManagementPageComponent implements OnInit {
         this.showRoleModal = false;
         this.editingRoleId = null;
         this.roleForm = { name: '', description: '', isActive: true };
-        this.loadRoles();
+        this.refreshRolesDeferred();
 
         if (isCreateMode && configurePermissionsAfterCreate && this.canManageRolePermissions) {
-        this.showAlertDeferred('Rol creado. Ahora configura sus permisos.', 'success', 3000);
-        this.openPermissionsModal(createdRole);
-        return;
-      }
+          this.showAlertDeferred('Rol creado. Ahora configura sus permisos.', 'success', 3000);
+          this.openPermissionsModal(createdRole);
+          return;
+        }
 
-      this.showAlertDeferred('Rol guardado correctamente.', 'success', 3000);
+        this.showAlertDeferred('Rol guardado correctamente.', 'success', 3000);
       },
       error: (error) => {
         this.isSaving = false;
@@ -205,7 +205,7 @@ export class RoleManagementPageComponent implements OnInit {
 
     this.userService.updateRoleStatus(role.id, targetStatus).subscribe({
       next: () => {
-        this.loadRoles();
+        this.refreshRolesDeferred();
         this.showAlertDeferred(`Rol ${targetStatus ? 'activado' : 'desactivado'} correctamente.`, 'success', 3000);
       },
       error: (error) => {
@@ -280,7 +280,7 @@ export class RoleManagementPageComponent implements OnInit {
         this.isSavingPermissions = false;
         this.closePermissionsModal(true);
         this.showAlertDeferred('Permisos del rol actualizados correctamente.', 'success', 3200);
-        this.loadRoles();
+        this.refreshRolesDeferred();
       },
       error: (error) => {
         this.isSavingPermissions = false;
@@ -348,6 +348,12 @@ export class RoleManagementPageComponent implements OnInit {
   ): void {
     setTimeout(() => {
       this.alertService.show(message, type, duration);
+    }, 0);
+  }
+
+  private refreshRolesDeferred(): void {
+    setTimeout(() => {
+      this.loadRoles();
     }, 0);
   }
 }

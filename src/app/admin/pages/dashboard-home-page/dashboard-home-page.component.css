@@ -226,6 +226,10 @@ h3 {
   border: 1px solid var(--dash-border);
   background: var(--dash-soft);
   padding: 0.45rem 0.6rem;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }
 
 .alert-item span {

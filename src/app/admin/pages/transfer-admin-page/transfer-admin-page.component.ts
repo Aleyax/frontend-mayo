@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { InventoryService } from '../../../inventory/services/inventory.service';
 import { Inventory, StockTransfer, StockTransferStatus } from '../../../inventory/interfaces/inventory.interface';
 import { StoreService } from '../../../store/services/store.service';
@@ -25,6 +25,8 @@ interface TransferDraftItem {
   quantity: number;
 }
 
+type TransferStatusFilter = 'ALL' | 'TO_RECEIVE' | StockTransferStatus;
+
 @Component({
   selector: 'app-transfer-admin-page',
   templateUrl: './transfer-admin-page.component.html',
@@ -37,6 +39,7 @@ export class TransferAdminPageComponent implements OnInit {
   private readonly storeService = inject(StoreService);
   private readonly productService = inject(ProductService);
   private readonly alertService = inject(AlertService);
+  private readonly route = inject(ActivatedRoute);
   private readonly originAvailabilityCache = new Map<number, Record<number, number>>();
 
   transfersData = signal<StockTransfer[]>([]);
@@ -44,7 +47,7 @@ export class TransferAdminPageComponent implements OnInit {
   productCatalog = signal<Product[]>([]);
 
   searchParam = signal<string>('');
-  statusFilter = signal<'ALL' | StockTransferStatus>('ALL');
+  statusFilter = signal<TransferStatusFilter>('ALL');
 
   showCreateDrawer = signal<boolean>(false);
   showTransferDetails = signal<boolean>(false);
@@ -115,7 +118,7 @@ export class TransferAdminPageComponent implements OnInit {
     const status = this.statusFilter();
 
     return this.transfersData().filter((transfer) => {
-      const matchesStatus = status === 'ALL' || transfer.status === status;
+      const matchesStatus = this.matchesStatusFilter(transfer.status, status);
       if (!matchesStatus) {
         return false;
       }
@@ -159,9 +162,44 @@ export class TransferAdminPageComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.route.queryParamMap.subscribe((queryParams) => {
+      this.applyFiltersFromQueryParams(queryParams);
+    });
     this.loadTransfers();
     this.loadStores();
     this.loadProducts();
+  }
+
+  private applyFiltersFromQueryParams(queryParams: ParamMap) {
+    const status = this.normalizeStatusFilterFromQuery(queryParams.get('status'));
+    const search = String(queryParams.get('search') || '').trim();
+    this.statusFilter.set(status);
+    this.searchParam.set(search);
+  }
+
+  private normalizeStatusFilterFromQuery(value: string | null): TransferStatusFilter {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (
+      normalized === 'ALL' ||
+      normalized === 'TO_RECEIVE' ||
+      normalized === 'PENDING' ||
+      normalized === 'IN_TRANSIT' ||
+      normalized === 'RECEIVED' ||
+      normalized === 'CANCELLED'
+    ) {
+      return normalized as TransferStatusFilter;
+    }
+    return 'ALL';
+  }
+
+  private matchesStatusFilter(status: StockTransferStatus, filter: TransferStatusFilter): boolean {
+    if (filter === 'ALL') {
+      return true;
+    }
+    if (filter === 'TO_RECEIVE') {
+      return status === 'PENDING' || status === 'IN_TRANSIT';
+    }
+    return status === filter;
   }
 
   private loadTransfers() {
@@ -264,7 +302,14 @@ export class TransferAdminPageComponent implements OnInit {
   }
 
   setStatusFilter(value: string) {
-    if (value === 'ALL' || value === 'PENDING' || value === 'IN_TRANSIT' || value === 'RECEIVED' || value === 'CANCELLED') {
+    if (
+      value === 'ALL' ||
+      value === 'TO_RECEIVE' ||
+      value === 'PENDING' ||
+      value === 'IN_TRANSIT' ||
+      value === 'RECEIVED' ||
+      value === 'CANCELLED'
+    ) {
       this.statusFilter.set(value);
     }
   }

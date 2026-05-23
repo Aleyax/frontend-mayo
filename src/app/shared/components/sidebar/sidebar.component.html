@@ -387,6 +387,30 @@
   @if (can('settings.manage')) {
     <li>
       <a
+        routerLink="/admin/settings"
+        routerLinkActive="active"
+        class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+        data-tip="Configuracion"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          stroke-width="2"
+          fill="none"
+          stroke="currentColor"
+          class="my-1.5 inline-block size-4"
+        >
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.05-.05a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.08a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.05.05a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.05-.05a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.05.05a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.08a1.7 1.7 0 0 0 1 1.55h.01a1.7 1.7 0 0 0 1.87-.34l.05-.05a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.05.05a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"></path>
+        </svg>
+        <span class="is-drawer-close:hidden">Configuracion</span>
+      </a>
+    </li>
+
+    <li>
+      <a
         routerLink="/admin/user-activities"
         routerLinkActive="active"
         class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
@@ -436,28 +460,5 @@
       </a>
     </li>
 
-    <li>
-      <a
-        routerLink="/admin/settings"
-        routerLinkActive="active"
-        class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-        data-tip="Configuracion"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          stroke-linejoin="round"
-          stroke-linecap="round"
-          stroke-width="2"
-          fill="none"
-          stroke="currentColor"
-          class="my-1.5 inline-block size-4"
-        >
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.05-.05a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.08a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.05.05a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.08a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.05-.05a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.05.05a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.08a1.7 1.7 0 0 0 1 1.55h.01a1.7 1.7 0 0 0 1.87-.34l.05-.05a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.05.05a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"></path>
-        </svg>
-        <span class="is-drawer-close:hidden">Configuracion</span>
-      </a>
-    </li>
   }
 </ul>

@@ -11,6 +11,7 @@ import { AlertService } from '../../../shared/services/alert.service';
 
 type SalesChannel = 'POS' | 'ECOMMERCE' | 'INTERNAL';
 type StockScope = 'critical-total' | 'out' | 'critical' | 'low' | 'normal';
+type OperationalAlertAction = 'stock_critical' | 'paid_without_picking' | 'pending_transfers' | 'ready_orders';
 
 interface DashboardOrder {
   id: number;
@@ -108,6 +109,7 @@ interface StoreSalesMetric {
 }
 
 interface OperationalAlertMetric {
+  action: OperationalAlertAction;
   label: string;
   value: number;
 }
@@ -389,6 +391,31 @@ export class DashboardHomePageComponent implements OnInit {
         endDate: cutoff.toISOString(),
       },
     });
+  }
+
+  goToOperationalAlert(alert: OperationalAlertMetric): void {
+    if (alert.action === 'stock_critical') {
+      this.goToCriticalProducts();
+      return;
+    }
+
+    if (alert.action === 'paid_without_picking') {
+      this.goToPaidWithoutPicking();
+      return;
+    }
+
+    if (alert.action === 'pending_transfers') {
+      void this.router.navigate(['/admin/transfers'], {
+        queryParams: {
+          status: 'TO_RECEIVE',
+        },
+      });
+      return;
+    }
+
+    if (alert.action === 'ready_orders') {
+      this.goToOrdersByStatus('READY');
+    }
   }
 
   private getVsYesterdayLabel(value: number | null): string {
@@ -870,10 +897,10 @@ export class DashboardHomePageComponent implements OnInit {
     readyOrders: number;
   }): OperationalAlertMetric[] {
     return [
-      { label: 'productos con stock critico', value: input.stockCritical },
-      { label: 'ordenes pagadas sin picking', value: input.paidWithoutPicking },
-      { label: 'transferencias pendientes de recepcion', value: input.pendingTransfers },
-      { label: 'ordenes listas sin entregar', value: input.readyOrders },
+      { action: 'stock_critical', label: 'productos con stock critico', value: input.stockCritical },
+      { action: 'paid_without_picking', label: 'ordenes pagadas sin picking', value: input.paidWithoutPicking },
+      { action: 'pending_transfers', label: 'transferencias pendientes de recepcion', value: input.pendingTransfers },
+      { action: 'ready_orders', label: 'ordenes listas sin entregar', value: input.readyOrders },
     ];
   }
 }
