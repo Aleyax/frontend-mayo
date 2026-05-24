@@ -9,7 +9,9 @@
     "test": "ng test",
     "test:pos": "vitest run --environment jsdom src/app/order/components/pos.component.pos-flow.spec.ts",
     "test:e2e": "playwright test",
-    "test:e2e:pos": "playwright test e2e/pos-payment.e2e.spec.ts"
+    "test:e2e:pos": "playwright test e2e/pos-payment.e2e.spec.ts",
+    "test:e2e:screenshots": "playwright test e2e/admin-screenshots.e2e.spec.ts",
+    "test:e2e:guide:screenshots": "playwright test e2e/user-guide-screenshots.e2e.spec.ts"
   },
   "prettier": {
     "printWidth": 100,

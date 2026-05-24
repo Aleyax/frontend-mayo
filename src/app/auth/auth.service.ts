@@ -3,6 +3,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 export type AuthUser = {
   id?: number | string;
@@ -20,6 +21,7 @@ export type AuthUser = {
 export class AuthService {
   private static readonly TOKEN_KEY = 'token';
   private static readonly USER_KEY = 'user';
+  private static readonly AUTH_BASE_URL = `${environment.apiUrl}/auth`;
 
   private readonly tokenState = signal<string | null>(null);
   private readonly currentUserState = signal<AuthUser | null>(null);
@@ -47,12 +49,12 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<{ token: string; user: AuthUser }> {
-    return this.http.post<{ token: string; user: AuthUser }>('http://localhost:3000/api/auth/login', { email, password });
+    return this.http.post<{ token: string; user: AuthUser }>(`${AuthService.AUTH_BASE_URL}/login`, { email, password });
   }
 
   logout(): void {
     this.http
-      .post('http://localhost:3000/api/auth/logout', {})
+      .post(`${AuthService.AUTH_BASE_URL}/logout`, {})
       .pipe(catchError(() => of(null)))
       .subscribe();
 
