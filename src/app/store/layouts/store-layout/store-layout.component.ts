@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, effect, inject, PLATFORM_ID, signal } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
@@ -14,6 +14,7 @@ import { MarketplaceAuthService } from '../../services/marketplace-auth.service'
 })
 export class StoreLayoutComponent {
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly currentTheme = signal<'dark' | 'light'>(this.getSavedTheme());
   readonly marketplaceUser = computed(() => this.marketplaceAuthService.getCurrentUser());
@@ -50,10 +51,15 @@ export class StoreLayoutComponent {
   toggleTheme(): void {
     const nextTheme = this.currentTheme() === 'dark' ? 'light' : 'dark';
     this.currentTheme.set(nextTheme);
-    localStorage.setItem('theme', nextTheme);
+    if (this.isBrowser) {
+      localStorage.setItem('theme', nextTheme);
+    }
   }
 
   private applyTheme(theme: 'dark' | 'light'): void {
+    if (!this.isBrowser) {
+      return;
+    }
     document.documentElement.setAttribute('data-theme', theme);
   }
 
@@ -62,6 +68,9 @@ export class StoreLayoutComponent {
   }
 
   private getSavedTheme(): 'dark' | 'light' {
+    if (!this.isBrowser) {
+      return 'dark';
+    }
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'light' ? 'light' : 'dark';
   }

@@ -11,6 +11,7 @@ import {
 } from '../../interfaces/marketplace.interface';
 import { MarketplaceAuthService } from '../../services/marketplace-auth.service';
 import { MarketplaceService } from '../../services/marketplace.service';
+import { SeoService } from '../../../shared/services/seo.service';
 
 type OrderStatusOption = {
   value: string;
@@ -29,6 +30,7 @@ export class AccountDashboardComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
   private readonly marketplaceService = inject(MarketplaceService);
+  private readonly seoService = inject(SeoService);
   private readonly canLoad = signal(false);
   private readonly profileReloadVersion = signal(0);
   private readonly ordersReloadVersion = signal(0);
@@ -243,6 +245,14 @@ export class AccountDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.seoService.setNoIndexPage({
+      title: 'Mi cuenta mayorista',
+      description: 'Gestiona tu perfil y consulta tus pedidos mayoristas.',
+      path: '/marketplace/account',
+      type: 'website',
+    });
+    this.seoService.clearJsonLd();
+
     if (!this.marketplaceAuthService.isAuthenticated()) {
       this.router.navigate(['/marketplace/auth'], { queryParams: { returnUrl: '/marketplace/account' } });
       return;

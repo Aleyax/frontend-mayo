@@ -5,6 +5,7 @@ import { authInterceptor } from './auth/auth.interceptor';
 import { marketplaceAuthInterceptor } from './store/interceptors/marketplace-auth.interceptor';
 
 import { routes } from './app.routes';
+import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -13,6 +14,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withFetch(),
       withInterceptors([authInterceptor, marketplaceAuthInterceptor])
-    )
+    ), provideClientHydration(withEventReplay())
   ]
 };

@@ -1,7 +1,8 @@
-import { computed, Injectable, inject, signal } from '@angular/core';
+import { computed, Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { MarketplaceAuthUser } from '../interfaces/marketplace.interface';
 
@@ -18,6 +19,7 @@ export class MarketplaceAuthService {
   private static readonly USER_KEY = 'marketplace_customer_user';
 
   private readonly http = inject(HttpClient);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly baseUrl = `${environment.apiUrl}/public/auth`;
   private readonly tokenState = signal<string | null>(this.loadTokenFromStorage());
   private readonly currentUserState = signal<MarketplaceAuthUser | null>(this.loadUserFromStorage());
@@ -112,13 +114,18 @@ export class MarketplaceAuthService {
     if (!token || !user) {
       return;
     }
-    localStorage.setItem(MarketplaceAuthService.TOKEN_KEY, token);
+    if (this.isBrowser) {
+      localStorage.setItem(MarketplaceAuthService.TOKEN_KEY, token);
+    }
     this.persistUser(user);
     this.tokenState.set(token);
     this.currentUserState.set(user);
   }
 
   private persistUser(user: MarketplaceAuthUser) {
+    if (!this.isBrowser) {
+      return;
+    }
     localStorage.setItem(MarketplaceAuthService.USER_KEY, JSON.stringify(user));
   }
 
@@ -129,7 +136,7 @@ export class MarketplaceAuthService {
   }
 
   private loadUserFromStorage(): MarketplaceAuthUser | null {
-    if (typeof window === 'undefined') {
+    if (!this.isBrowser) {
       return null;
     }
 
@@ -154,6 +161,9 @@ export class MarketplaceAuthService {
   }
 
   private removeStoredSession() {
+    if (!this.isBrowser) {
+      return;
+    }
     localStorage.removeItem(MarketplaceAuthService.TOKEN_KEY);
     localStorage.removeItem(MarketplaceAuthService.USER_KEY);
   }
@@ -162,14 +172,14 @@ export class MarketplaceAuthService {
     if (this.tokenState()) {
       return this.tokenState();
     }
-    if (typeof window === 'undefined') {
+    if (!this.isBrowser) {
       return null;
     }
     return localStorage.getItem(MarketplaceAuthService.TOKEN_KEY);
   }
 
   private loadTokenFromStorage(): string | null {
-    if (typeof window === 'undefined') {
+    if (!this.isBrowser) {
       return null;
     }
 

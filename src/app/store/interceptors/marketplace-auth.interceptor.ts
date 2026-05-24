@@ -1,8 +1,9 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
 import { MarketplaceAuthService } from '../services/marketplace-auth.service';
 
 const MARKETPLACE_PROTECTED_ENDPOINTS = [
@@ -20,6 +21,7 @@ function isMarketplaceProtectedRequest(url: string): boolean {
 export const marketplaceAuthInterceptor: HttpInterceptorFn = (req, next) => {
   const marketplaceAuthService = inject(MarketplaceAuthService);
   const router = inject(Router);
+  const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   const isProtectedRequest = isMarketplaceProtectedRequest(req.url);
   const token = marketplaceAuthService.getToken();
 
@@ -36,7 +38,7 @@ export const marketplaceAuthInterceptor: HttpInterceptorFn = (req, next) => {
         const isMarketplaceRoute = currentUrl.startsWith('/marketplace');
         const isMarketplaceAuthRoute = currentUrl.startsWith('/marketplace/auth');
 
-        if (isMarketplaceRoute && !isMarketplaceAuthRoute && !redirectInFlight) {
+        if (isBrowser && isMarketplaceRoute && !isMarketplaceAuthRoute && !redirectInFlight) {
           redirectInFlight = true;
           void router.navigate(['/marketplace/auth'], {
             queryParams: { returnUrl: currentUrl },

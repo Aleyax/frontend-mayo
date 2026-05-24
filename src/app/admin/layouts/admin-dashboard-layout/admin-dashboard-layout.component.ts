@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
 import { AuthService } from '../../../auth/auth.service';
 import { OrderService } from '../../../order/services/order.service';
+import { SeoService } from '../../../shared/services/seo.service';
 import { catchError, filter, interval, map, of, startWith, Subscription } from 'rxjs';
 
 type PendingAssignment = {
@@ -73,9 +74,18 @@ export class AdminDashboardLayoutComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private orderService: OrderService,
+    private seoService: SeoService,
   ) { }
 
   ngOnInit() {
+    this.seoService.setNoIndexPage({
+      title: 'Panel de administracion',
+      description: 'Seccion privada para administracion de operaciones.',
+      path: '/admin',
+      type: 'website',
+    });
+    this.seoService.clearJsonLd();
+
     const savedTheme = localStorage.getItem('theme');
     this.currentTheme = savedTheme === 'light' ? 'light' : 'dark';
     this.applyTheme();

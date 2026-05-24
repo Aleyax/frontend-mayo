@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { MarketplaceAuthService } from '../../services/marketplace-auth.service';
+import { SeoService } from '../../../shared/services/seo.service';
 
 type AuthMode = 'login' | 'register';
 
@@ -14,10 +15,11 @@ type AuthMode = 'login' | 'register';
   templateUrl: './marketplace-auth.component.html',
   styleUrl: './marketplace-auth.component.css',
 })
-export class MarketplaceAuthComponent {
+export class MarketplaceAuthComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly marketplaceAuthService = inject(MarketplaceAuthService);
+  private readonly seoService = inject(SeoService);
 
   readonly mode = signal<AuthMode>('login');
   readonly loading = signal(false);
@@ -30,6 +32,16 @@ export class MarketplaceAuthComponent {
   lastName = '';
   phone = '';
   address = '';
+
+  ngOnInit(): void {
+    this.seoService.setNoIndexPage({
+      title: 'Acceso de clientes | Marketplace mayorista',
+      description: 'Inicia sesion o crea tu cuenta de cliente para gestionar compras mayoristas.',
+      path: '/marketplace/auth',
+      type: 'website',
+    });
+    this.seoService.clearJsonLd();
+  }
 
   switchMode(mode: AuthMode) {
     this.mode.set(mode);

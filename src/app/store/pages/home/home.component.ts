@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,6 +6,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { MarketplaceCatalogProduct, MarketplaceCatalogResponse } from '../../interfaces/marketplace.interface';
 import { MarketplaceService, PublicProductFilters } from '../../services/marketplace.service';
 import { MarketplaceCartService } from '../../services/marketplace-cart.service';
+import { SeoService } from '../../../shared/services/seo.service';
 
 interface FilterOption {
   id: number;
@@ -23,6 +24,7 @@ interface FilterOption {
 export class HomeComponent {
   private readonly marketplaceService = inject(MarketplaceService);
   private readonly cartService = inject(MarketplaceCartService);
+  private readonly seoService = inject(SeoService);
   private readonly productsQuery = signal<PublicProductFilters>({
     skip: 1,
     take: 60,
@@ -95,6 +97,45 @@ export class HomeComponent {
     return Array.from(sizesMap.values());
   });
 
+  constructor() {
+    effect(() => {
+      const products = this.products();
+      const totalProducts = this.totalProducts();
+      const heroImage = this.findSeoImage(products);
+      const description = totalProducts > 0
+        ? `Explora ${totalProducts} productos del marketplace mayorista con precios por volumen.`
+        : 'Explora el marketplace mayorista con precios por volumen y catalogo actualizado.';
+
+      this.seoService.setPage({
+        title: 'Marketplace mayorista | Catalogo de productos',
+        description,
+        path: '/marketplace',
+        image: heroImage,
+        type: 'website',
+        robots: 'index,follow',
+        keywords: 'marketplace mayorista, catalogo mayorista, productos al por mayor',
+      });
+
+      this.seoService.setJsonLd({
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Marketplace mayorista',
+        description,
+        url: this.seoService.buildAbsoluteUrl('/marketplace') ?? '/marketplace',
+        numberOfItems: totalProducts,
+        mainEntity: {
+          '@type': 'ItemList',
+          itemListElement: products.slice(0, 10).map((product, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: product.name,
+            url: this.seoService.buildAbsoluteUrl(`/marketplace/products/${product.id}`) ?? `/marketplace/products/${product.id}`,
+          })),
+        },
+      });
+    });
+  }
+
   get cartUnits() {
     return this.cartService.totalUnits();
   }
@@ -144,5 +185,20 @@ export class HomeComponent {
       return 'Por agotarse';
     }
     return 'Disponible';
+  }
+
+  private findSeoImage(products: MarketplaceCatalogProduct[]): string | null {
+    for (const product of products) {
+      if (product?.imageUrl) {
+        return product.imageUrl;
+      }
+
+      const fallbackImage = product?.images?.[0]?.url;
+      if (fallbackImage) {
+        return fallbackImage;
+      }
+    }
+
+    return null;
   }
 }

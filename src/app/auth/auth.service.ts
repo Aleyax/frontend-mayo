@@ -1,8 +1,9 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../environments/environment';
 
 export type AuthUser = {
@@ -25,6 +26,7 @@ export class AuthService {
 
   private readonly tokenState = signal<string | null>(null);
   private readonly currentUserState = signal<AuthUser | null>(null);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly token = this.tokenState.asReadonly();
   readonly currentUser = this.currentUserState.asReadonly();
@@ -37,6 +39,10 @@ export class AuthService {
   readonly authenticated = computed(() => !!this.token());
 
   constructor(private http: HttpClient, private router: Router) {
+    if (!this.isBrowser) {
+      return;
+    }
+
     const token = localStorage.getItem(AuthService.TOKEN_KEY);
     const user = this.parseStoredUser(localStorage.getItem(AuthService.USER_KEY));
 
@@ -53,6 +59,11 @@ export class AuthService {
   }
 
   logout(): void {
+    if (!this.isBrowser) {
+      this.clearSession();
+      return;
+    }
+
     this.http
       .post(`${AuthService.AUTH_BASE_URL}/logout`, {})
       .pipe(catchError(() => of(null)))
@@ -63,15 +74,19 @@ export class AuthService {
   }
 
   clearSession(): void {
-    localStorage.removeItem(AuthService.TOKEN_KEY);
-    localStorage.removeItem(AuthService.USER_KEY);
+    if (this.isBrowser) {
+      localStorage.removeItem(AuthService.TOKEN_KEY);
+      localStorage.removeItem(AuthService.USER_KEY);
+    }
     this.tokenState.set(null);
     this.currentUserState.set(null);
   }
 
   setSession(token: string, user: AuthUser): void {
-    localStorage.setItem(AuthService.TOKEN_KEY, token);
-    localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+    if (this.isBrowser) {
+      localStorage.setItem(AuthService.TOKEN_KEY, token);
+      localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+    }
     this.tokenState.set(token);
     this.currentUserState.set(user);
   }
@@ -80,12 +95,14 @@ export class AuthService {
     if (!token || this.isTokenExpired(token)) {
       return;
     }
-    localStorage.setItem(AuthService.TOKEN_KEY, token);
+    if (this.isBrowser) {
+      localStorage.setItem(AuthService.TOKEN_KEY, token);
+    }
     this.tokenState.set(token);
   }
 
   getToken(): string | null {
-    const token = this.tokenState() ?? localStorage.getItem(AuthService.TOKEN_KEY);
+    const token = this.tokenState() ?? (this.isBrowser ? localStorage.getItem(AuthService.TOKEN_KEY) : null);
     if (!token) {
       return null;
     }

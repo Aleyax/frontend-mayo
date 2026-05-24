@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../auth.service';
+import { SeoService } from '../../shared/services/seo.service';
 
 @Component({
   selector: 'app-login',
@@ -17,6 +18,7 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly seoService = inject(SeoService);
 
   readonly loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -24,6 +26,16 @@ export class Login {
   });
   readonly isLoading = signal(false);
   readonly errorMessage = signal('');
+
+  constructor() {
+    this.seoService.setNoIndexPage({
+      title: 'Acceso administrador',
+      description: 'Panel privado de administracion.',
+      path: '/login',
+      type: 'website',
+    });
+    this.seoService.clearJsonLd();
+  }
 
   onSubmit(): void {
     if (this.isLoading()) {

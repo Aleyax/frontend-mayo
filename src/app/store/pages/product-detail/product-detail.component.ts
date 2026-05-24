@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { MarketplaceCatalogProduct, MarketplaceProductVariant } from '../../interfaces/marketplace.interface';
 import { MarketplaceService } from '../../services/marketplace.service';
 import { MarketplaceCartService } from '../../services/marketplace-cart.service';
+import { SeoService } from '../../../shared/services/seo.service';
 
 @Component({
   selector: 'app-marketplace-product-detail',
@@ -24,6 +25,7 @@ export class ProductDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly marketplaceService = inject(MarketplaceService);
   private readonly cartService = inject(MarketplaceCartService);
+  private readonly seoService = inject(SeoService);
   private readonly productId = signal<number | null>(null);
   private readonly invalidProductMessage = signal('');
   private readonly addToCartMessage = signal('');
@@ -192,6 +194,53 @@ export class ProductDetailComponent implements OnInit {
       }
 
       this.syncImageForCurrentSelection();
+    });
+
+    effect(() => {
+      const invalidMessage = this.invalidProductMessage();
+      const product = this.product();
+      const currentProductId = this.productId();
+
+      if (invalidMessage) {
+        this.seoService.setNoIndexPage({
+          title: 'Producto invalido | Marketplace mayorista',
+          description: 'No se encontro un producto valido para mostrar.',
+          path: '/marketplace/products',
+          type: 'product',
+        });
+        this.seoService.clearJsonLd();
+        return;
+      }
+
+      if (!product) {
+        const detailPath = (currentProductId ?? 0) > 0
+          ? `/marketplace/products/${currentProductId}`
+          : '/marketplace/products';
+        this.seoService.setPage({
+          title: 'Detalle de producto | Marketplace mayorista',
+          description: 'Revisa variantes, stock y precios por volumen en nuestro marketplace mayorista.',
+          path: detailPath,
+          type: 'product',
+          robots: 'index,follow',
+        });
+        this.seoService.clearJsonLd();
+        return;
+      }
+
+      const detailPath = `/marketplace/products/${product.id}`;
+      const description = this.buildSeoDescription(product);
+      const image = this.resolveSeoImage(product);
+
+      this.seoService.setPage({
+        title: `${product.name} | Marketplace mayorista`,
+        description,
+        path: detailPath,
+        image,
+        type: 'product',
+        robots: 'index,follow',
+        keywords: `producto mayorista, ${product.name}, ${product.category?.name || 'catalogo mayorista'}`,
+      });
+      this.seoService.setJsonLd(this.buildProductJsonLd(product, detailPath, description));
     });
   }
 
@@ -403,5 +452,43 @@ export class ProductDetailComponent implements OnInit {
 
   private bumpQuantityVersion() {
     this.quantityVersion.update((value) => value + 1);
+  }
+
+  private resolveSeoImage(product: MarketplaceCatalogProduct): string | null {
+    return product.imageUrl || product.images?.[0]?.url || null;
+  }
+
+  private buildSeoDescription(product: MarketplaceCatalogProduct): string {
+    const source = product.description?.trim()
+      || `${product.name} con variantes y precios por volumen para compras mayoristas.`;
+    const normalized = source.replace(/\s+/g, ' ').trim();
+    return normalized.length <= 160 ? normalized : `${normalized.slice(0, 157)}...`;
+  }
+
+  private buildProductJsonLd(product: MarketplaceCatalogProduct, detailPath: string, description: string): Record<string, unknown> {
+    const absoluteUrl = this.seoService.buildAbsoluteUrl(detailPath) ?? detailPath;
+    const images = [
+      ...(product.imageUrl ? [product.imageUrl] : []),
+      ...(product.images || []).map((image) => image.url).filter((url) => !!url),
+    ];
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description,
+      image: images,
+      category: product.category?.name || undefined,
+      sku: product.variants?.[0]?.sku || undefined,
+      offers: {
+        '@type': 'AggregateOffer',
+        lowPrice: Number(product.minPrice || 0).toFixed(2),
+        highPrice: Number(product.maxPrice || product.minPrice || 0).toFixed(2),
+        priceCurrency: 'PEN',
+        offerCount: Number(product.variants?.length || 0),
+        availability: product.hasStock ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+        url: absoluteUrl,
+      },
+    };
   }
 }
