@@ -50,6 +50,7 @@
     "@angular/build": "21.2.9",
     "@angular/cli": "21.2.9",
     "@angular/compiler-cli": "21.2.11",
+    "@netlify/angular-runtime": "^3.0.1",
     "@playwright/test": "^1.60.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
